@@ -2,6 +2,7 @@ import java.io.*;
 import java.nio.file.*;
 import java.util.*;
 import java.net.ServerSocket;
+import java.text.SimpleDateFormat;
 import java.net.Socket;
 
 public class peerProcess {
@@ -18,6 +19,39 @@ public class peerProcess {
 
     public peerProcess(int peerId) {
         this.peerId = peerId;
+    }
+
+    public static void logPeerConnection(int ID1, int ID2) {
+
+        // Get the names of the log files
+        String logFileName1 = "log_peer_" + ID1 + ".log";
+        String logFileName2 = "log_peer_" + ID2 + ".log";
+
+        // Get the current time in the desired format
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        String currentTime = sdf.format(new Date());
+
+        // Create log messages
+        String logMessage1 = currentTime + ": Peer " + ID1 + " makes a connection to Peer " + ID2 + ".";
+        String logMessage2 = currentTime + ": Peer " + ID2 + " is connected from Peer " + ID1 + ".";
+
+        // Log the messages to the corresponding log files
+        logToLogFile(logFileName1, logMessage1);
+        logToLogFile(logFileName2, logMessage2);
+    }
+
+    public static void logToLogFile(String fileName, String message) {
+        // Specify the relative path for the log directory as an empty string since 
+        // log files are in the same directory
+        String logDirectory = "";
+
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(logDirectory + fileName, true))) {
+            // Logs the message and a newline after it
+            writer.write(message);
+            writer.newLine();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     public void init() throws IOException {
