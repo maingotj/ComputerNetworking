@@ -4,7 +4,7 @@ import java.nio.ByteBuffer;
 public class MessageUtil {
 
     // Handshake constants
-    private static final String HANDSHAKE_HEADER = "P2PFILESHARINGPROJ";
+    private static final String handHead = "P2PFILESHARINGPROJ";
     private static final byte[] ZERO_BITS = new byte[10];
 
     // Message types
@@ -19,7 +19,7 @@ public class MessageUtil {
 
     // Send Handshake message
     public static void sendHandshake(DataOutputStream out, int peerID) throws IOException {
-        out.writeBytes(HANDSHAKE_HEADER);
+        out.writeBytes(handHead);
         out.write(ZERO_BITS);
         out.writeInt(peerID);
     }
@@ -30,7 +30,7 @@ public class MessageUtil {
         in.readFully(headerBytes);
         String header = new String(headerBytes);
         
-        if (!HANDSHAKE_HEADER.equals(header)) {
+        if (!handHead.equals(header)) {
             throw new IOException("Invalid Handshake Header");
         }
         

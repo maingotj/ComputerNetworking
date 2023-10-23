@@ -1,10 +1,14 @@
+
 import java.io.*;
 import java.nio.file.*;
 import java.util.*;
+
 import java.net.ServerSocket;
 import java.text.SimpleDateFormat;
 import java.net.Socket;
 import java.nio.ByteBuffer;
+
+
 
 
 public class peerProcess {
@@ -23,77 +27,78 @@ public class peerProcess {
         this.peerId = peerId;
     }
 
-    // Create handshake message
-    public static byte[] makeHandshake() {
-        byte[] header = "P2PFILESHARINGPROJ".getBytes();
-        // required header of handshake
-        byte[] bytes = "0000000000".getBytes();
-        // 10 0 bytes
 
-        ByteBuffer buffer = ByteBuffer.allocate(4);
-        buffer.putInt(peerId);
-        byte[] iDinfo = buffer.array();
-        // makes peerID a byte value
+    public static void choke() {
 
-        byte[] message = new byte[32];
-        // byte array for actual message
-
-        System.arraycopy(header, 0, message, 0, header.length);
-        // add header to the message
-
-        System.arraycopy(bytes, 0, message, 18, bytes.length);
-        // add 0 bytes to message
-
-        System.arraycopy(iDinfo, 0, message, 28, iDinfo.length);
-        // add peer ID to finish header
-
-        return message;
     }
 
-    //reads handshake message
-    public static int readHandshake(byte[] handshake) {
-        byte[] header = Arrays.copyOfRange(handshake, 0, 18);
-        //read header
+    public static void unchoke() {
 
-        byte[] headerTest = "P2PFILESHARINGPROJ".getBytes();
-        if(!Arrays.equals(header, headerTest)) {
-            System.out.println("header not correct");
-        }
-        else {
-
-        }
-        // check that header is correct
-
-
-        byte[] zerobytes = Arrays.copyOfRange(handshake, 18, 28);
-        // read zero bytes
-
-        byte[] bytes = "0000000000".getBytes();
-
-        if(!Arrays.equals(zerobytes, bytes)) {
-            System.out.println("header not correct");
-        }
-        else {
-            
-        }
-
-        byte[] peerSender = Arrays.copyOfRange(handshake, 28, handshake.length);
-        ByteBuffer peerBuffer = ByteBuffer.wrap(peerSender);
-        int peerSenderID = peerBuffer.getInt();
-        // read the Peer ID
-
-        return peerSenderID;
-        // return the peer senders ID as a parameter
     }
 
+    public static void interested() {
 
+    }
+
+    public static void notInterested() {
+
+    }
+
+    public static void have(MessageUtil.Message message) {
+
+    }
+
+    public static void bitfield(MessageUtil.Message message) {
+
+    }
+
+    public static void request(MessageUtil.Message message) {
+
+    }
+
+    public static void piece(MessageUtil.Message message) {
+        
+    }
+
+    //parses what type of message it is and makes a decision based on that
+    public static void parseMessage(MessageUtil.Message message) {
+        byte type = message.getType();
+
+        // switch statement to parse type
+        switch(type) {
+            case MessageUtil.CHOKE -> choke();
+            case MessageUtil.UNCHOKE -> unchoke();
+            case MessageUtil.INTERESTED -> interested();
+            case MessageUtil.NOT_INTERESTED -> notInterested();
+            case MessageUtil.HAVE -> have(message);
+            case MessageUtil.BITFIELD -> bitfield(message);
+            case MessageUtil.REQUEST -> request(message);
+            case MessageUtil.PIECE -> piece(message);
+            default -> System.out.println("invalid type");
+        }
+    }
+
+    public static void makeHave() {
+
+    }
+
+    public static void makeBitfield() {
+        
+    }
+
+    public static void makeRequest() {
+        
+    }
+
+    public static void makePiece() {
+        
+    }
 
     // Log Method for TCP Connection
     public static void logTCPConnection(int ID1, int ID2) {
 
         // Get the names of the log files
         String logFileName1 = "log_peer_" + ID1 + ".log";
-        String logFileName2 = "log_peer_" + ID2 + ".log";
 
         // Get the current time in the desired format
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
@@ -101,11 +106,9 @@ public class peerProcess {
 
         // Create log messages
         String logMessage1 = currentTime + ": Peer " + ID1 + " makes a connection to Peer " + ID2 + ".";
-        String logMessage2 = currentTime + ": Peer " + ID2 + " is connected from Peer " + ID1 + ".";
 
         // Log the messages to the corresponding log files
         logToLogFile(logFileName1, logMessage1);
-        logToLogFile(logFileName2, logMessage2);
     }
     
     // Log Method for Change of Preferred Neighbors
@@ -132,6 +135,73 @@ public class peerProcess {
         // Log the message to the log file
         logToLogFile(logFileName, logMessage);
     }
+
+    // Log Method for Change of optimistically preffered Neighbor
+    public void logOptNeighborChange(int neighborID) {
+        // Get name of Log File
+        String logFileName = "log_peer_" + this.peerId + ".log";
+
+        // Get the current time in the desired format
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        String currentTime = sdf.format(new Date());
+
+        // Create log messages
+        String logMessage = currentTime + ": Peer " + this.peerId + " has the optimistically unchoked neighbor " + neighborID + ".";
+
+        // Log the messages to the corresponding log files
+        logToLogFile(logFileName, logMessage);
+    }
+
+    // Log Method for being unchoked
+    public void logUnchoking(int neighborID) {
+        // Get name of Log File
+        String logFileName = "log_peer_" + this.peerId + ".log";
+
+        // Get the current time in the desired format
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        String currentTime = sdf.format(new Date());
+
+        // Create log messages
+        String logMessage = currentTime + ": Peer " + this.peerId + " is unchoked by " + neighborID + ".";
+
+        // Log the messages to the corresponding log files
+        logToLogFile(logFileName, logMessage);
+    }
+
+
+    // Log Method for being choked
+    public void logChoking(int neighborID) {
+        // Get name of Log File
+        String logFileName = "log_peer_" + this.peerId + ".log";
+
+        // Get the current time in the desired format
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        String currentTime = sdf.format(new Date());
+
+        // Create log messages
+        String logMessage = currentTime + ": Peer " + this.peerId + " is choked by " + neighborID + ".";
+
+        // Log the messages to the corresponding log files
+        logToLogFile(logFileName, logMessage);
+    }
+
+    // Log Method for receiving interested message
+    public void logInterested(int neighborID) {
+        // Get name of Log File
+        String logFileName = "log_peer_" + this.peerId + ".log";
+
+        // Get the current time in the desired format
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        String currentTime = sdf.format(new Date());
+
+        // Create log messages
+        String logMessage = currentTime + ": Peer " + this.peerId + " received the ‘interested’ message from " + neighborID + ".";
+
+        // Log the messages to the corresponding log files
+        logToLogFile(logFileName, logMessage);
+    }
+
+
 
 
     // Method to write to the log files
@@ -176,8 +246,8 @@ public class peerProcess {
         }
     }
 
-        // ... [other methods]
 
+        //reads peerinformation from PeerInfo.cfg
         private List<PeerInfo> readPeerInfo(String filename) throws IOException {
             List<PeerInfo> peers = new ArrayList<>();
             List<String> lines = Files.readAllLines(Paths.get(filename));
@@ -194,10 +264,9 @@ public class peerProcess {
     
             return peers;
         }
-    
-        // ... [rest of the class]
-    
+        
 
+    // makes bitfield for the file
     private void initBitfield() {
         int numOfPieces = (int) Math.ceil((double) config.getFileSize() / config.getPieceSize());
         this.bitfield = new BitSet(numOfPieces);
@@ -206,6 +275,7 @@ public class peerProcess {
         }
     }
 
+    // connects to any already made peers
     private void connectToPreviousPeers() {
         for (PeerInfo info : allPeers) {
             if (info.peerId >= this.peerId) {
@@ -222,6 +292,7 @@ public class peerProcess {
         }
     }
 
+    // performs the handshake to start TCP connection
     private void performHandshake(Peer peer) throws IOException {
         MessageUtil.sendHandshake(dataOut, this.peerId);
 
@@ -230,9 +301,13 @@ public class peerProcess {
             throw new IOException("Mismatched Peer ID in Handshake");
         }
 
+        logTCPConnection(this.peerId, receivedPeerId);
+        // logs that the connection occured
+
         System.out.println("Handshake successful with Peer " + receivedPeerId);
     }
 
+    // listens for any new connections 
     private void listenForConnections() {
         Thread listenerThread = new Thread(() -> {
             try (ServerSocket serverSocket = new ServerSocket(allPeers.get(0).port)) {
