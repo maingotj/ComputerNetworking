@@ -4,10 +4,12 @@ import java.util.*;
 import java.net.ServerSocket;
 import java.text.SimpleDateFormat;
 import java.net.Socket;
+import java.nio.ByteBuffer;
+
 
 public class peerProcess {
 
-    private int peerId;
+    private static int peerId;
     private boolean hasFile;
     private BitSet bitfield;
     private List<PeerInfo> allPeers = new ArrayList<>();
@@ -19,6 +21,69 @@ public class peerProcess {
 
     public peerProcess(int peerId) {
         this.peerId = peerId;
+    }
+
+    // Create handshake message
+    public static byte[] makeHandshake() {
+        byte[] header = "P2PFILESHARINGPROJ".getBytes();
+        // required header of handshake
+        byte[] bytes = "0000000000".getBytes();
+        // 10 0 bytes
+
+        ByteBuffer buffer = ByteBuffer.allocate(4);
+        buffer.putInt(peerId);
+        byte[] iDinfo = buffer.array();
+        // makes peerID a byte value
+
+        byte[] message = new byte[32];
+        // byte array for actual message
+
+        System.arraycopy(header, 0, message, 0, header.length);
+        // add header to the message
+
+        System.arraycopy(bytes, 0, message, 18, bytes.length);
+        // add 0 bytes to message
+
+        System.arraycopy(iDinfo, 0, message, 28, iDinfo.length);
+        // add peer ID to finish header
+
+        return message;
+    }
+
+    //reads handshake message
+    public static int readHandshake(byte[] handshake) {
+        byte[] header = Arrays.copyOfRange(handshake, 0, 18);
+        //read header
+
+        byte[] headerTest = "P2PFILESHARINGPROJ".getBytes();
+        if(!Arrays.equals(header, headerTest)) {
+            System.out.println("header not correct");
+        }
+        else {
+
+        }
+        // check that header is correct
+
+
+        byte[] zerobytes = Arrays.copyOfRange(handshake, 18, 28);
+        // read zero bytes
+
+        byte[] bytes = "0000000000".getBytes();
+
+        if(!Arrays.equals(zerobytes, bytes)) {
+            System.out.println("header not correct");
+        }
+        else {
+            
+        }
+
+        byte[] peerSender = Arrays.copyOfRange(handshake, 28, handshake.length);
+        ByteBuffer peerBuffer = ByteBuffer.wrap(peerSender);
+        int peerSenderID = peerBuffer.getInt();
+        // read the Peer ID
+
+        return peerSenderID;
+        // return the peer senders ID as a parameter
     }
 
     /*  Log Method for TCP Connection
@@ -396,7 +461,7 @@ public class peerProcess {
     }
 
     private void waitForCompletion() {
-        // You can implement this based on how you handle the exchange of pieces and keeping track 
+        //implement this based on how we handle the exchange of pieces and keeping track 
         // of which peers have the complete file.
     }
 

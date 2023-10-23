@@ -10,6 +10,7 @@ public class CommonConfig {
     private long fileSize;
     private long pieceSize;
 
+    // reads config file
     public CommonConfig() {
         try (FileInputStream fis = new FileInputStream("Common.cfg")) {
             Properties prop = new Properties();
@@ -27,6 +28,7 @@ public class CommonConfig {
         }
     }
 
+    // get functions for config information
     public int getNumberOfPreferredNeighbors() {
         return numberOfPreferredNeighbors;
     }
