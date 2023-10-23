@@ -94,26 +94,50 @@ public class peerProcess {
         
     }
 
-    // Log Method for TCP Connection
-    public static void logTCPConnection(int ID1, int ID2) {
+    /*  Log Method for TCP Connection
+        Whenever a peer makes a TCP connection to other peer, it generates the following log:
+        [Time]: Peer [peer_ID 1] makes a connection to Peer [peer_ID 2].
 
-        // Get the names of the log files
-        String logFileName1 = "log_peer_" + ID1 + ".log";
+        [peer_ID 1] is the ID of peer who generates the log, [peer_ID 2] is the peer connected
+        from [peer_ID 1]. The [Time] field represents the current time, which contains the date,
+        hour, minute, and second. The format of [Time] is up to you.
 
+        Whenever a peer is connected from another peer, it generates the following log:
+        [Time]: Peer [peer_ID 1] is connected from Peer [peer_ID 2].
+
+        [peer_ID 1] is the ID of peer who generates the log, [peer_ID 2] is the peer who has
+        made TCP connection to [peer_ID 1].
+    */
+    public static void logTCPConnection(int peerID1, int peerID2) {
+        // Get the names of the log files to write to
+        String logFileName1 = "log_peer_" + peerID1 + ".log";
+        String logFileName2 = "log_peer_" + peerID2 + ".log";
+    
         // Get the current time in the desired format
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         String currentTime = sdf.format(new Date());
-
+    
         // Create log messages
-        String logMessage1 = currentTime + ": Peer " + ID1 + " makes a connection to Peer " + ID2 + ".";
-
+        String logMessage1 = currentTime + ": Peer " + peerID1 + " makes a connection to Peer " + peerID2 + ".";
+        String logMessage2 = currentTime + ": Peer " + peerID2 + " is connected from Peer " + peerID1 + ".";
+    
         // Log the messages to the corresponding log files
         logToLogFile(logFileName1, logMessage1);
     }
     
-    // Log Method for Change of Preferred Neighbors
+    /*  Log Method for Change of Preferred Neighbors
+        Whenever a peer changes its preferred neighbors, it generates the following log:
+        [Time]: Peer [peer_ID] has the preferred neighbors [preferred neighbor ID list].
+
+        [preferred neighbor list] is the list of peer IDs separated by comma ‘,’.
+
+        Example Call:
+        int peerID = 1001;
+        List<Integer> preferredNeighbors = List.of(1002, 1003, 1004);
+        logPreferredNeighborsChange(peerID, preferredNeighbors);
+    */
     public static void logPreferredNeighborsChange(int peerID, List<Integer> preferredNeighbors) {
-        // Get name of Log File
+        // Get name of Log File to write to
         String logFileName = "log_peer_" + peerID + ".log";
 
         // Get the current time in the desired format
@@ -136,72 +160,189 @@ public class peerProcess {
         logToLogFile(logFileName, logMessage);
     }
 
-    // Log Method for Change of optimistically preffered Neighbor
-    public void logOptNeighborChange(int neighborID) {
-        // Get name of Log File
-        String logFileName = "log_peer_" + this.peerId + ".log";
+    /*  Log Method for Change of Optimistically unchoked neighbor
+        Whenever a peer changes its optimistically unchoked neighbor, it generates the following log:
+        [Time]: Peer [peer_ID] has the optimistically unchoked neighbor [optimistically unchoked neighbor ID].
+
+        [optimistically unchoked neighbor ID] is the peer ID of the optimistically unchoked
+        neighbor.
+
+        Example Call:
+        int peerID = 1001;
+        int optimisticallyUnchokedNeighbor = 1005;
+        logOptimisticallyUnchokedNeighborChange(peerID, optimisticallyUnchokedNeighbor);
+    */
+    public static void logOptimisticallyUnchokedNeighborChange(int peerID, int optimisticallyUnchokedNeighbor) {
+        // Get name of Log File to write to
+        String logFileName = "log_peer_" + peerID + ".log";
 
         // Get the current time in the desired format
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         String currentTime = sdf.format(new Date());
 
-        // Create log messages
-        String logMessage = currentTime + ": Peer " + this.peerId + " has the optimistically unchoked neighbor " + neighborID + ".";
+        // Build the log message
+        String logMessage = currentTime + ": Peer " + peerID + " has the optimistically unchoked neighbor " + optimisticallyUnchokedNeighbor + ".";
 
-        // Log the messages to the corresponding log files
+        // Log the message to the log file
         logToLogFile(logFileName, logMessage);
     }
 
-    // Log Method for being unchoked
-    public void logUnchoking(int neighborID) {
-        // Get name of Log File
-        String logFileName = "log_peer_" + this.peerId + ".log";
+    /*  Log Method for Unchoking event
+        Whenever a peer is unchoked by a neighbor (which means when a peer receives an
+        unchoking message from a neighbor), it generates the following log:
+        [Time]: Peer [peer_ID 1] is unchoked by [peer_ID 2].
+
+        [peer_ID 1] represents the peer who is unchoked and [peer_ID 2] represents the peer
+        who unchokes [peer_ID 1]
+    */
+    public static void logUnchokingEvent(int peerID1, int peerID2) {
+        // Get name of Log File to write to
+        String logFileName1 = "log_peer_" + peerID1 + ".log";
 
         // Get the current time in the desired format
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         String currentTime = sdf.format(new Date());
 
-        // Create log messages
-        String logMessage = currentTime + ": Peer " + this.peerId + " is unchoked by " + neighborID + ".";
+        // Build the log message
+        String logMessage = currentTime + ": Peer " + peerID1 + " is unchoked by " + peerID2 + ".";
 
-        // Log the messages to the corresponding log files
-        logToLogFile(logFileName, logMessage);
+        // Log the message to the log file
+        logToLogFile(logFileName1, logMessage);
     }
 
+    /*  Log Method for Choking event
+        Whenever a peer is choked by a neighbor (which means when a peer receives a choking
+        message from a neighbor), it generates the following log:
+        [Time]: Peer [peer_ID 1] is choked by [peer_ID 2].
 
-    // Log Method for being choked
-    public void logChoking(int neighborID) {
-        // Get name of Log File
-        String logFileName = "log_peer_" + this.peerId + ".log";
-
+        [peer_ID 1] represents the peer who is choked and [peer_ID 2] represents the peer who
+        chokes [peer_ID 1].
+     */
+    public static void logChokingEvent(int peerID1, int peerID2) {
+        // Get name of Log File to write to
+        String logFileName1 = "log_peer_" + peerID1 + ".log";
+    
         // Get the current time in the desired format
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         String currentTime = sdf.format(new Date());
-
-        // Create log messages
-        String logMessage = currentTime + ": Peer " + this.peerId + " is choked by " + neighborID + ".";
-
-        // Log the messages to the corresponding log files
-        logToLogFile(logFileName, logMessage);
+    
+        // Build the log message
+        String logMessage = currentTime + ": Peer " + peerID1 + " is choked by " + peerID2 + ".";
+    
+        // Log the message to the log file
+        logToLogFile(logFileName1, logMessage);
     }
 
-    // Log Method for receiving interested message
-    public void logInterested(int neighborID) {
-        // Get name of Log File
-        String logFileName = "log_peer_" + this.peerId + ".log";
+    /*  Log Method for receiving 'have' Message
+        Whenever a peer receives a ‘have’ message, it generates the following log:
+        [Time]: Peer [peer_ID 1] received the ‘have’ message from [peer_ID 2] for the piece
+        [piece index].
 
+        [peer_ID 1] represents the peer who received the ‘have’ message and [peer_ID 2]
+        represents the peer who sent the message. [piece index] is the piece index contained in
+        the message.
+     */
+    public static void logHaveMessage(int peerID1, int peerID2, int pieceIndex) {
+        // Get name of Log File to write to
+        String logFileName1 = "log_peer_" + peerID1 + ".log";
+    
         // Get the current time in the desired format
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         String currentTime = sdf.format(new Date());
-
-        // Create log messages
-        String logMessage = currentTime + ": Peer " + this.peerId + " received the ‘interested’ message from " + neighborID + ".";
-
-        // Log the messages to the corresponding log files
-        logToLogFile(logFileName, logMessage);
+    
+        // Build the log message
+        String logMessage = currentTime + ": Peer " + peerID1 + " received the 'have' message from " + peerID2 + " for the piece " + pieceIndex + ".";
+    
+        // Log the message to the log file
+        logToLogFile(logFileName1, logMessage);
     }
 
+    /*  Log Method for receiving 'interested' message
+        Whenever a peer receives an ‘interested’ message, it generates the following log:
+        [Time]: Peer [peer_ID 1] received the ‘interested’ message from [peer_ID 2].
 
+        [peer_ID 1] represents the peer who received the ‘interested’ message and [peer_ID 2]
+        represents the peer who sent the message
+     */
+    public static void logInterestedMessage(int peerID1, int peerID2) {
+        // Get name of Log File to write to
+        String logFileName1 = "log_peer_" + peerID1 + ".log";
+    
+        // Get the current time in the desired format
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        String currentTime = sdf.format(new Date());
+    
+        // Build the log message
+        String logMessage = currentTime + ": Peer " + peerID1 + " received the 'interested' message from " + peerID2 + ".";
+    
+        // Log the message to the log file
+        logToLogFile(logFileName1, logMessage);
+    }
+
+    /*  Log Method for receiving 'not interested' message
+        Whenever a peer receives a ‘not interested’ message, it generates the following log:
+        [Time]: Peer [peer_ID 1] received the ‘not interested’ message from [peer_ID 2].
+
+        [peer_ID 1] represents the peer who received the ‘not interested’ message and [peer_ID
+        2] represents the peer who sent the message.
+     */
+    public static void logNotInterestedMessage(int peerID1, int peerID2) {
+        // Get name of Log File to write to
+        String logFileName1 = "log_peer_" + peerID1 + ".log";
+    
+        // Get the current time in the desired format
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        String currentTime = sdf.format(new Date());
+    
+        // Build the log message
+        String logMessage = currentTime + ": Peer " + peerID1 + " received the 'not interested' message from " + peerID2 + ".";
+    
+        // Log the message to the log file
+        logToLogFile(logFileName1, logMessage);
+    }
+
+    /*  Log Method for Downloading a Piece
+        Whenever a peer finishes downloading a piece, it generates the following log:
+        [Time]: Peer [peer_ID 1] has downloaded the piece [piece index] from [peer_ID 2]. Now
+        the number of pieces it has is [number of pieces].
+
+        [peer_ID 1] represents the peer who downloaded the piece and [peer_ID 2] represents
+        the peer who sent the piece. [piece index] is the piece index the peer has downloaded.
+        [number of pieces] represents the number of pieces the peer currently has.
+     */
+    public static void logPieceDownload(int peerID1, int peerID2, int pieceIndex, int numberOfPieces) {
+        // Get name of Log File to write to
+        String logFileName1 = "log_peer_" + peerID1 + ".log";
+    
+        // Get the current time in the desired format
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        String currentTime = sdf.format(new Date());
+    
+        // Build the log message
+        String logMessage = currentTime + ": Peer " + peerID1 + " has downloaded the piece " + pieceIndex + " from " + peerID2 + ". Now the number of pieces it has is " + numberOfPieces + ".";
+    
+        // Log the message to the log file
+        logToLogFile(logFileName1, logMessage);
+    }
+
+    /*  Log Method for Completion of Download
+        Whenever a peer downloads the complete file, it generates the following log:
+        [Time]: Peer [peer_ID] has downloaded the complete file.
+     */
+    public static void logDownloadCompletion(int peerID) {
+        // Get name of Log File to write to
+        String logFileName = "log_peer_" + peerID + ".log";
+    
+        // Get the current time in the desired format
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        String currentTime = sdf.format(new Date());
+    
+        // Build the log message
+        String logMessage = currentTime + ": Peer " + peerID + " has downloaded the complete file.";
+    
+        // Log the message to the log file
+        logToLogFile(logFileName, logMessage);
+    }
 
 
     // Method to write to the log files
@@ -337,7 +478,6 @@ public class peerProcess {
     }
 
     public static void main(String[] args) {
-         
         if (args.length != 1) {
             System.out.println("Usage: java peerProcess <peerID>");
             return;
@@ -354,12 +494,6 @@ public class peerProcess {
         } catch (IOException e) {
             e.printStackTrace();
         }
-
-        /* HOW TO CALL logPreferredNeighborsChange EXAMPLE
-        int peerID = 1001;
-        List<Integer> preferredNeighbors = List.of(1002, 1003, 1004);
-        logPreferredNeighborsChange(peerID, preferredNeighbors);
-        */
     }
 }
 
