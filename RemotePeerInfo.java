@@ -11,10 +11,27 @@ public class RemotePeerInfo {
 	public String peerId;
 	public String peerAddress;
 	public String peerPort;
+	public boolean hasFile;
 	
 	public RemotePeerInfo(String pId, String pAddress, String pPort) {
 		peerId = pId;
 		peerAddress = pAddress;
 		peerPort = pPort;
+	}
+
+	public RemotePeerInfo(String pId, String pAddress, String pPort, String fileString) {
+		peerId = pId;
+		peerAddress = pAddress;
+		peerPort = pPort;
+
+		if(fileString == "1") {
+			hasFile = true;
+		}
+		else if(fileString == "0") {
+			hasFile = false;
+		}
+		else{
+			System.out.println("Error");
+		}
 	}
 }
