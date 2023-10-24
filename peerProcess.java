@@ -3,6 +3,8 @@ import java.io.*;
 import java.nio.file.*;
 import java.util.*;
 
+import javax.imageio.plugins.bmp.BMPImageWriteParam;
+
 import java.net.ServerSocket;
 import java.text.SimpleDateFormat;
 import java.net.Socket;
@@ -13,7 +15,7 @@ import java.nio.ByteBuffer;
 
 public class peerProcess {
 
-    private static int peerId;
+    private int peerId;
     private boolean hasFile;
     private BitSet bitfield;
     private List<PeerInfo> allPeers = new ArrayList<>();
@@ -78,20 +80,53 @@ public class peerProcess {
         }
     }
 
-    public static void makeHave() {
-
+    public void makeGenMessage(byte type) throws IOException {
+        MessageUtil.sendMessage(dataOut, type, null);
     }
 
-    public static void makeBitfield() {
-        
+    // makes a have message
+    public  void makeHave() throws IOException{
+        byte type = 4;
+
+        // index of 4 bytes for piece had
+        byte[] index = new byte[4];
+
+        MessageUtil.sendMessage(dataOut, type, index); 
     }
 
-    public static void makeRequest() {
-        
+    public void makeBitfieldMsg() throws IOException {
+        byte type = 5;
+
+        // converts bitfield to byte array
+        byte[] payload = this.bitfield.toByteArray();
+
+        //calls message function with payload
+        MessageUtil.sendMessage(dataOut, type, payload);
+    }
+    
+    // makes a request message
+    public  void makeRequest() throws IOException {
+        byte type = 6;
+
+        // index of requested piece
+        byte[] index = new byte[4];
+
+        //calls message function with payload
+        MessageUtil.sendMessage(dataOut, type, index); 
     }
 
-    public static void makePiece() {
-        
+    // makes a piece message
+    public void makePiece() throws IOException {
+        byte type = 7;
+
+        // create byte array for the piece
+        byte[] piece = new byte[(int) config.getPieceSize()];
+
+        // TODO implement file reading for pieces
+
+
+        //calls message function with payload
+        MessageUtil.sendMessage(dataOut, type, piece);
     }
 
     /*  Log Method for TCP Connection
@@ -111,7 +146,7 @@ public class peerProcess {
     public static void logTCPConnection(int peerID1, int peerID2) {
         // Get the names of the log files to write to
         String logFileName1 = "log_peer_" + peerID1 + ".log";
-        String logFileName2 = "log_peer_" + peerID2 + ".log";
+        //String logFileName2 = "log_peer_" + peerID2 + ".log";
     
         // Get the current time in the desired format
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
@@ -119,7 +154,7 @@ public class peerProcess {
     
         // Create log messages
         String logMessage1 = currentTime + ": Peer " + peerID1 + " makes a connection to Peer " + peerID2 + ".";
-        String logMessage2 = currentTime + ": Peer " + peerID2 + " is connected from Peer " + peerID1 + ".";
+        //String logMessage2 = currentTime + ": Peer " + peerID2 + " is connected from Peer " + peerID1 + ".";
     
         // Log the messages to the corresponding log files
         logToLogFile(logFileName1, logMessage1);
