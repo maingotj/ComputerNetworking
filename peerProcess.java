@@ -26,58 +26,62 @@ public class peerProcess {
     }
 
 
-    public static void choke() {
+    public static void choke(Peer peer) {
         // record as being choked by other user 
     }
 
-    public static void unchoke() {
+    public static void unchoke(Peer peer) {
 
         // record being unchoked by other user
 
     }
 
-    public static void interested() {
+    public static void interested(Peer peer) {
         //register user ID as interested in receiving data
 
     }
 
-    public static void notInterested() {
+    public static void notInterested(Peer peer) {
         //register user ID as not interested in receiving data
 
     }
 
-    public static void have(MessageUtil.Message message) {
+    public static void have(MessageUtil.Message message, Peer peer) {
         // record what user ID has in there bitfield and change accordingly
 
     }
 
-    public static void bitfield(MessageUtil.Message message) {
-        // record bitfield of user ID
+     // record bitfield of user ID
+    public static void bitfield(MessageUtil.Message message, Peer peer) {
+        PeerInfo peerInfo = peer.getInfo();
+
+        //adds bitfield to the peers info
+        peerInfo.addBitfield(message.getPayload());
 
     }
 
-    public static void request(MessageUtil.Message message) {
+    public static void request(MessageUtil.Message message, Peer peer) {
         // record request of which piece(s) a user ID wants
     }
 
-    public static void piece(MessageUtil.Message message) {
+    public static void piece(MessageUtil.Message message, Peer peer) {
         // download piece received from a user
     }
 
     //parses what type of message it is and makes a decision based on that
-    public static void parseMessage(MessageUtil.Message message) {
+    public static void parseMessage(MessageUtil.Message message, Peer peer) {
         byte type = message.getType();
 
         // switch statement to parse type
         switch(type) {
-            case MessageUtil.CHOKE -> choke();
-            case MessageUtil.UNCHOKE -> unchoke();
-            case MessageUtil.INTERESTED -> interested();
-            case MessageUtil.NOT_INTERESTED -> notInterested();
-            case MessageUtil.HAVE -> have(message);
-            case MessageUtil.BITFIELD -> bitfield(message);
-            case MessageUtil.REQUEST -> request(message);
-            case MessageUtil.PIECE -> piece(message);
+            case MessageUtil.CHOKE -> choke(peer);
+            case MessageUtil.UNCHOKE -> unchoke(peer);
+            case MessageUtil.INTERESTED -> interested(peer);
+            case MessageUtil.NOT_INTERESTED -> notInterested(peer);
+            case MessageUtil.HAVE -> have(message, peer);
+            case MessageUtil.BITFIELD -> bitfield(message, peer);
+            case MessageUtil.REQUEST -> request(message, peer);
+            case MessageUtil.PIECE -> piece(message, peer);
             default -> System.out.println("invalid type");
         }
     }
@@ -508,6 +512,7 @@ public class peerProcess {
             }
         });
         listenerThread.start();
+        listenerThread.stop(); //TODO: delete when making complete function
     }
 
     private void waitForCompletion() {
@@ -517,9 +522,11 @@ public class peerProcess {
 
     public static void main(String[] args) {
         if (args.length != 1) {
-            System.out.println("Usage: java peerProcess <peerID>");
-            return;
+           System.out.println("Usage: java peerProcess <peerID>");
+           return;
         }
+
+
 
         System.out.println("Made it to main");
 
@@ -532,6 +539,7 @@ public class peerProcess {
         } catch (IOException e) {
             e.printStackTrace();
         }
+        System.out.println("Program finished");
     }
 }
 
