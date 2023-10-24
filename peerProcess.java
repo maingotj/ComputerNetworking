@@ -1,10 +1,6 @@
-
 import java.io.*;
 import java.nio.file.*;
 import java.util.*;
-
-import javax.imageio.plugins.bmp.BMPImageWriteParam;
-
 import java.net.ServerSocket;
 import java.text.SimpleDateFormat;
 import java.net.Socket;
@@ -31,35 +27,41 @@ public class peerProcess {
 
 
     public static void choke() {
-
+        // record as being choked by other user 
     }
 
     public static void unchoke() {
 
+        // record being unchoked by other user
+
     }
 
     public static void interested() {
+        //register user ID as interested in receiving data
 
     }
 
     public static void notInterested() {
+        //register user ID as not interested in receiving data
 
     }
 
     public static void have(MessageUtil.Message message) {
+        // record what user ID has in there bitfield and change accordingly
 
     }
 
     public static void bitfield(MessageUtil.Message message) {
+        // record bitfield of user ID
 
     }
 
     public static void request(MessageUtil.Message message) {
-
+        // record request of which piece(s) a user ID wants
     }
 
     public static void piece(MessageUtil.Message message) {
-        
+        // download piece received from a user
     }
 
     //parses what type of message it is and makes a decision based on that
@@ -80,6 +82,7 @@ public class peerProcess {
         }
     }
 
+    //sends a message for messages that require no payload
     public void makeGenMessage(byte type) throws IOException {
         MessageUtil.sendMessage(dataOut, type, null);
     }
