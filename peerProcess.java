@@ -11,6 +11,8 @@ import java.nio.ByteBuffer;
 
 public class peerProcess {
 
+    public int index;
+    private PeerInfo peerInfo;
     private int peerId;
     private boolean hasFile;
     private BitSet bitfield;
@@ -153,7 +155,7 @@ public class peerProcess {
     public static void logTCPConnection(int peerID1, int peerID2) {
         // Get the names of the log files to write to
         String logFileName1 = "log_peer_" + peerID1 + ".log";
-        //String logFileName2 = "log_peer_" + peerID2 + ".log";
+        String logFileName2 = "log_peer_" + peerID2 + ".log";
     
         // Get the current time in the desired format
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
@@ -161,10 +163,12 @@ public class peerProcess {
     
         // Create log messages
         String logMessage1 = currentTime + ": Peer " + peerID1 + " makes a connection to Peer " + peerID2 + ".";
-        //String logMessage2 = currentTime + ": Peer " + peerID2 + " is connected from Peer " + peerID1 + ".";
+        String logMessage2 = currentTime + ": Peer " + peerID2 + " is connected from Peer " + peerID1 + ".";
     
         // Log the messages to the corresponding log files
         logToLogFile(logFileName1, logMessage1);
+        logToLogFile(logFileName2, logMessage2);
+
     }
     
     /*  Log Method for Change of Preferred Neighbors
@@ -441,6 +445,10 @@ public class peerProcess {
                 String hostName = parts[1].trim();
                 int port = Integer.parseInt(parts[2].trim());
                 boolean hasFile = parts[3].trim().equals("1");
+
+                if(this.peerId == id) {
+                    this.peerInfo = new PeerInfo(id, hostName, port, hasFile);
+                }
     
                 peers.add(new PeerInfo(id, hostName, port, hasFile));
             }
@@ -485,7 +493,7 @@ public class peerProcess {
     private void performHandshake(Peer peer) throws IOException {
         MessageUtil.sendHandshake(peer.getDataOut(), this.peerId);
 
-        int receivedPeerId = MessageUtil.receiveHandshake(dataIn);
+        int receivedPeerId = MessageUtil.receiveHandshake(peer.getDataIn());
         if (receivedPeerId != peer.getInfo().peerId) {
             throw new IOException("Mismatched Peer ID in Handshake");
         }
@@ -496,24 +504,25 @@ public class peerProcess {
         System.out.println("Handshake successful with Peer " + receivedPeerId);
     }
 
+
     // listens for any new connections 
     private void listenForConnections() {
         System.out.println("listening");
         Thread listenerThread = new Thread(() -> {
-            try (ServerSocket serverSocket = new ServerSocket(allPeers.get(0).port)) {
-                while (true) {
-                    Socket socket = serverSocket.accept();
-                    this.dataIn = new DataInputStream(socket.getInputStream());
-                    this.dataOut = new DataOutputStream(socket.getOutputStream());
+            try (ServerSocket serverSocket = new ServerSocket(this.peerInfo.port)) {
+                    while (true) {
+                        
+                        Socket socket = serverSocket.accept();
+                        this.dataIn = new DataInputStream(socket.getInputStream());
+                        this.dataOut = new DataOutputStream(socket.getOutputStream());
 
-                    int receivedPeerId = MessageUtil.receiveHandshake(dataIn);
-                    
-                    // You might want to check if this peer ID is in your expected list of peers.
-                    
-                    MessageUtil.sendHandshake(dataOut, this.peerId);
-                    System.out.println("Handshake successful with Peer " + receivedPeerId);
-                    // Handle the new connection (like adding to connectedPeers, etc.)
-                }
+                        int receivedPeerId = MessageUtil.receiveHandshake(dataIn);
+                        
+                        
+                        MessageUtil.sendHandshake(dataOut, this.peerId);
+                        System.out.println("Handshake successful with Peer " + receivedPeerId);
+                        // Handle the new connection (like adding to connectedPeers, etc.)
+                    }
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -537,6 +546,7 @@ public class peerProcess {
 
         System.out.println("Made it to main");
 
+        // int peerId = Integer.parseInt("1002");
         int peerId = Integer.parseInt(args[0]);
         peerProcess process = new peerProcess(peerId);
 
