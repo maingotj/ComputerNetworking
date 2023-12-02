@@ -25,6 +25,8 @@ public class CommonConfig {
             fileSize = Long.parseLong(prop.getProperty("FileSize"));
             pieceSize = Long.parseLong(prop.getProperty("PieceSize"));
 
+            //System.out.println(numberOfPreferredNeighbors + " " + unchokingInterval + " " + optimisticUnchokingInterval+ " " + fileName + " " + fileSize + " " + pieceSize);
+
         } catch (IOException e) {
             e.printStackTrace();
         }

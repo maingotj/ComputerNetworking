@@ -453,13 +453,19 @@ public class peerProcess {
     private void initBitfield() {
         int numOfPieces = (int) Math.ceil((double) config.getFileSize() / config.getPieceSize());
         this.bitfield = new BitSet(numOfPieces);
+
+        //System.out.println(bitfield.size());
+
         if (hasFile) {
             bitfield.set(0, numOfPieces);
         }
+
+        //System.out.println(numOfPieces);
     }
 
     // connects to any already made peers
     private void connectToPreviousPeers() {
+        System.out.println("connect to prev");
         for (PeerInfo info : allPeers) {
             if (info.peerId >= this.peerId) {
                 break;
@@ -477,7 +483,7 @@ public class peerProcess {
 
     // performs the handshake to start TCP connection
     private void performHandshake(Peer peer) throws IOException {
-        MessageUtil.sendHandshake(dataOut, this.peerId);
+        MessageUtil.sendHandshake(peer.getDataOut(), this.peerId);
 
         int receivedPeerId = MessageUtil.receiveHandshake(dataIn);
         if (receivedPeerId != peer.getInfo().peerId) {
@@ -492,6 +498,7 @@ public class peerProcess {
 
     // listens for any new connections 
     private void listenForConnections() {
+        System.out.println("listening");
         Thread listenerThread = new Thread(() -> {
             try (ServerSocket serverSocket = new ServerSocket(allPeers.get(0).port)) {
                 while (true) {
@@ -512,7 +519,7 @@ public class peerProcess {
             }
         });
         listenerThread.start();
-        listenerThread.stop(); //TODO: delete when making complete function
+        //listenerThread.stop(); //TODO: delete when making complete function
     }
 
     private void waitForCompletion() {
@@ -532,7 +539,7 @@ public class peerProcess {
 
         int peerId = Integer.parseInt(args[0]);
         peerProcess process = new peerProcess(peerId);
-        CommonConfig config = new CommonConfig();
+
         try {
             process.init();
             
