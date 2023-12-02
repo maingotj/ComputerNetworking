@@ -12,6 +12,12 @@ Bradley Meyer
 
 ## Contributions
 
+Jonathan Maingot: Protocol Functions
+
+Andres Martinez: Log and Protocol Functions
+
+Bradley Meyer: Peer Connection
+
 ## Youtube Link
 
 ## What we accomplished
