@@ -1,5 +1,3 @@
-import java.util.BitSet;
-
 public class PeerInfo {
     public int peerId;
     public String hostName;
@@ -17,6 +15,10 @@ public class PeerInfo {
 
     public void addBitfield(byte[] bitfield1) {
         bitfield = bitfield1;
+    }
+
+    public byte[] getBitfield() {
+        return this.bitfield;
     }
 
 }
