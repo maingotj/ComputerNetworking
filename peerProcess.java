@@ -1,10 +1,17 @@
-import java.io.*;
-import java.nio.file.*;
-import java.util.*;
+import java.io.BufferedWriter;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.net.ServerSocket;
-import java.text.SimpleDateFormat;
 import java.net.Socket;
-import java.nio.ByteBuffer;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.BitSet;
+import java.util.Date;
+import java.util.List;
 
 
 
@@ -15,7 +22,7 @@ public class peerProcess {
     private PeerInfo peerInfo;
     private int peerId;
     private boolean hasFile;
-    private BitSet bitfield;
+    private static BitSet bitfield;
     private List<PeerInfo> allPeers = new ArrayList<>();
     private List<Peer> connectedPeers = new ArrayList<>();
     private HashMap<Integer, PeerInfo> map = new HashMap<>();
@@ -26,6 +33,10 @@ public class peerProcess {
 
     public peerProcess(int peerId) {
         this.peerId = peerId;
+    }
+
+    public static BitSet getBitfield() {
+        return bitfield;
     }
 
 
@@ -39,14 +50,24 @@ public class peerProcess {
 
     }
 
-    public static void interested(Peer peer) {
-        //register user ID as interested in receiving data
-
+    public static void interested(Peer peer) throws IOException {
+        // Check if you are interested in the peer
+        if (amInterestedIn(peer)) {
+            MessageUtil.sendMessage(peer.getDataOut(), MessageUtil.INTERESTED, null);
+            peer.setInterestIn(true);
+        }
     }
-
-    public static void notInterested(Peer peer) {
-        //register user ID as not interested in receiving data
-
+    
+    public static void notInterested(Peer peer) throws IOException {
+        MessageUtil.sendMessage(peer.getDataOut(), MessageUtil.NOT_INTERESTED, null);
+        peer.setInterestIn(false);
+    }
+    
+    private static boolean amInterestedIn(Peer peer) {
+        BitSet theirBitfield = BitSet.valueOf(peer.getInfo().getBitfield()); 
+        BitSet myBitfield = peerProcess.getBitfield(); 
+        theirBitfield.andNot(myBitfield);
+        return !theirBitfield.isEmpty();
     }
 
     public static void have(MessageUtil.Message message, Peer peer) {
@@ -72,7 +93,7 @@ public class peerProcess {
     }
 
     //parses what type of message it is and makes a decision based on that
-    public static void parseMessage(MessageUtil.Message message, Peer peer) {
+    public static void parseMessage(MessageUtil.Message message, Peer peer) throws IOException {
         byte type = message.getType();
 
         // switch statement to parse type
