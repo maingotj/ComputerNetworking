@@ -19,6 +19,9 @@ import java.util.BitSet;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 
 
@@ -670,10 +673,11 @@ public class peerProcess {
 
     // listens for any new connections 
     private void listenForConnections() throws IOException {
-        System.out.println("listening");
+        System.out.println("listening on port" + this.peerInfo.port);
 
         try {
             ServerSocket serverSocket = new ServerSocket(this.peerInfo.port);
+
 
             while (true) {
                 Socket clientSocket = serverSocket.accept();
@@ -691,22 +695,36 @@ public class peerProcess {
     }
 
     private void waitForCompletion() {
-        //implement this based on how we handle the exchange of pieces and keeping track 
-        // of which peers have the complete file.
+        
+        /* ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
+
+        // Schedule the first task to run every 5 seconds
+        scheduler.scheduleAtFixedRate(() -> {
+            // Your first function goes here
+            System.out.println("Task 1 executed at: " + System.currentTimeMillis());
+        }, 0, 5, TimeUnit.SECONDS);
+
+        // Schedule the second task to run every 10 seconds
+        scheduler.scheduleAtFixedRate(() -> {
+            // Your second function goes here
+            System.out.println("Task 2 executed at: " + System.currentTimeMillis());
+        }, 0, 10, TimeUnit.SECONDS); */
+
+
     }
 
     public static void main(String[] args) {
-        // if (args.length != 1) {
-        //    System.out.println("Usage: java peerProcess <peerID>");
-        //    return;
-        // }
+        if (args.length != 1) {
+           System.out.println("Usage: java peerProcess <peerID>");
+           return;
+        }
 
 
 
         System.out.println("Made it to main");
 
-        int peerId = Integer.parseInt("1001");
-        // int peerId = Integer.parseInt(args[0]);
+        // int peerId = Integer.parseInt("1001");
+        int peerId = Integer.parseInt(args[0]);
         peerProcess process = new peerProcess(peerId);
 
         try {
