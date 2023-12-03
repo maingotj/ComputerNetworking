@@ -9,10 +9,12 @@ import java.io.File;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.BitSet;
 import java.util.Date;
 import java.util.HashMap;
@@ -35,6 +37,8 @@ public class peerProcess {
     private CommonConfig config;
     private FileInputStream inputStream;
     private FileOutputStream outputStream;
+    private int numChoked = 0;
+    private  byte[] fileArr;
 
     private DataInputStream dataIn;
     private DataOutputStream dataOut;
@@ -58,7 +62,7 @@ public class peerProcess {
 
     }
 
-    public static void interested(Peer peer) throws IOException {
+    public void interested(Peer peer) throws IOException {
         // Check if you are interested in the peer
         if (amInterestedIn(peer)) {
             MessageUtil.sendMessage(peer.getDataOut(), MessageUtil.INTERESTED, null);
@@ -66,42 +70,61 @@ public class peerProcess {
         }
     }
     
-    public static void notInterested(Peer peer) throws IOException {
+    public void notInterested(Peer peer) throws IOException {
         MessageUtil.sendMessage(peer.getDataOut(), MessageUtil.NOT_INTERESTED, null);
         peer.setInterestIn(false);
     }
     
-    private static boolean amInterestedIn(Peer peer) {
+    private boolean amInterestedIn(Peer peer) {
         BitSet theirBitfield = BitSet.valueOf(peer.getInfo().getBitfield()); 
         BitSet myBitfield = peerProcess.getBitfield(); 
         theirBitfield.andNot(myBitfield);
         return !theirBitfield.isEmpty();
     }
 
-    public static void have(MessageUtil.Message message, Peer peer) {
+    public void have(MessageUtil.Message message, Peer peer) {
         // record what user ID has in there bitfield and change accordingly
+
+        ByteBuffer buf = ByteBuffer.wrap(message.getPayload());
+        int index = buf.getInt();
+
+        //TODO: add bitfield change
 
     }
 
      // record bitfield of user ID
-    public static void bitfield(MessageUtil.Message message, Peer peer) {
+    public void bitfield(MessageUtil.Message message, Peer peer) {
         PeerInfo peerInfo = peer.getInfo();
 
         //adds bitfield to the peers info
         peerInfo.addBitfield(message.getPayload());
 
+        System.out.println("bitfield recieved " + message.getPayload().length);
+
     }
 
-    public static void request(MessageUtil.Message message, Peer peer) {
+    public void request(MessageUtil.Message message, Peer peer) {
         // record request of which piece(s) a user ID wants
     }
 
-    public static void piece(MessageUtil.Message message, Peer peer) {
+    public void piece(MessageUtil.Message message, Peer peer) {
         // download piece received from a user
+        byte[] payload = message.getPayload();
+        
+        byte[] index = Arrays.copyOfRange(payload, 0, 4);
+        byte[] piece = Arrays.copyOfRange(payload, 4, payload.length);
+
+        ByteBuffer buf = ByteBuffer.wrap(index);
+        int pIndex = buf.getInt();
+
+        System.arraycopy(piece, 0, fileArr, pIndex * (int) config.getPieceSize(), piece.length);
+
+
+        // TODO: change bitfield
     }
 
     //parses what type of message it is and makes a decision based on that
-    public static void parseMessage(MessageUtil.Message message, Peer peer) throws IOException {
+    public void parseMessage(MessageUtil.Message message, Peer peer) throws IOException {
         byte type = message.getType();
 
         // switch statement to parse type
@@ -124,13 +147,13 @@ public class peerProcess {
     }
 
     // makes a have message
-    public  void makeHave(Peer peer) throws IOException{
+    public  void makeHave(Peer peer, int index) throws IOException{
         byte type = 4;
 
         // index of 4 bytes for piece had
-        byte[] index = new byte[4];
+        byte[] payload = ByteBuffer.allocate(4).putInt(index).array();
 
-        MessageUtil.sendMessage(peer.getDataOut(), type, index); 
+        MessageUtil.sendMessage(peer.getDataOut(), type, payload); 
     }
 
     public void makeBitfieldMsg(Peer peer) throws IOException {
@@ -141,31 +164,41 @@ public class peerProcess {
 
         //calls message function with payload
         MessageUtil.sendMessage(peer.getDataOut(), type, payload);
+
+        System.out.println("Sent Bitfield " + payload.length);
     }
     
     // makes a request message
-    public  void makeRequest(Peer peer) throws IOException {
+    public  void makeRequest(Peer peer, int index) throws IOException {
         byte type = 6;
 
         // index of requested piece
-        byte[] index = new byte[4];
+        byte[] payload = ByteBuffer.allocate(4).putInt(index).array();
 
         //calls message function with payload
-        MessageUtil.sendMessage(peer.getDataOut(), type, index); 
+        MessageUtil.sendMessage(peer.getDataOut(), type, payload); 
     }
 
     // makes a piece message
-    public void makePiece(Peer peer) throws IOException {
+    public void makePiece(Peer peer, int pieceIndex) throws IOException {
         byte type = 7;
 
         // create byte array for the piece
-        byte[] piece = new byte[(int) config.getPieceSize()];
+        int arrIndex = pieceIndex * (int)config.getPieceSize();
 
-        // TODO implement file reading for pieces
+        byte[] pIndex = ByteBuffer.allocate(4).putInt(pieceIndex).array();
+
+        byte[] piece = Arrays.copyOfRange(fileArr, arrIndex, arrIndex + (int)config.getPieceSize());
+
+        byte[] message = new byte[pIndex.length + piece.length];
+
+        System.arraycopy(pIndex, 0, message, 0, pIndex.length);
+        System.arraycopy(piece, 0, message, pIndex.length, piece.length);
+
 
 
         //calls message function with payload
-        MessageUtil.sendMessage(peer.getDataOut(), type, piece);
+        MessageUtil.sendMessage(peer.getDataOut(), type, message);
     }
 
     /*  Log Method for TCP Connection
@@ -440,6 +473,12 @@ public class peerProcess {
         readConfigurations();
         initBitfield();
         initFileStream();
+
+        fileArr = new byte[(int) config.getFileSize()];
+
+        if (hasFile) {
+            copyFile();
+        }
         
         if (peerId != allPeers.get(0).peerId) {
             connectToPreviousPeers();
@@ -462,6 +501,10 @@ public class peerProcess {
                 break;
             }
         }
+    }
+
+    private void copyFile() throws IOException {
+        inputStream.read(fileArr);
     }
 
 
@@ -508,7 +551,12 @@ public class peerProcess {
 
         String filePath = "peer_" + this.peerId + "" + File.separator + config.getFileName();
 
-        outputStream = new FileOutputStream(filePath);
+        if(!hasFile) {
+            outputStream = new FileOutputStream(filePath);
+        }
+        else {
+            outputStream = null;
+        }
         inputStream = new FileInputStream(filePath);
     }
 
@@ -534,12 +582,15 @@ public class peerProcess {
                         // String message = "heloooo";
                         // out.write(message.getBytes());
 
+                        makeBitfieldMsg(peer);
+
                         while(!allDone) {//waits till all are checked to halt
 
                             MessageUtil.Message message = MessageUtil.receiveMessage(in); //receive message
                             parseMessage(message, peer);
 
                         }
+
 
 
                         // byte[] buffer = new byte[1024];
@@ -572,21 +623,17 @@ public class peerProcess {
         // logs that the connection occured
 
         System.out.println("Handshake successful with Peer " + receivedPeerId);
+
+        
     }
 
+    private void handleMessages(Socket socket) {
 
-    // listens for any new connections 
-    private void listenForConnections() {
-        System.out.println("listening");
-        Thread listenerThread = new Thread(() -> {
-            try (ServerSocket serverSocket = new ServerSocket(this.peerInfo.port)) {
-                    while (true) {
-                        
-                        Socket socket = serverSocket.accept();
-                        DataInputStream in = new DataInputStream(socket.getInputStream());
-                        DataOutputStream out = new DataOutputStream(socket.getOutputStream());
+        try {
+            DataInputStream in = new DataInputStream(socket.getInputStream());
+            DataOutputStream out = new DataOutputStream(socket.getOutputStream());
 
-                        int receivedPeerId = MessageUtil.receiveHandshake(in);
+            int receivedPeerId = MessageUtil.receiveHandshake(in);
                         
                         
                         MessageUtil.sendHandshake(out, this.peerId);
@@ -605,14 +652,42 @@ public class peerProcess {
 
                         connectedPeers.add(peer);
 
+                        makeBitfieldMsg(peer);
 
-                    }
-            } catch (IOException e) {
-                e.printStackTrace();
+                        while(!allDone) {//waits till all are checked to halt
+
+                            MessageUtil.Message message = MessageUtil.receiveMessage(in); //receive message
+                            parseMessage(message, peer);
+
+                        }
+
+        } catch(IOException e) {
+            e.printStackTrace();
+        }
+
+    }
+
+
+    // listens for any new connections 
+    private void listenForConnections() throws IOException {
+        System.out.println("listening");
+
+        try {
+            ServerSocket serverSocket = new ServerSocket(this.peerInfo.port);
+
+            while (true) {
+                Socket clientSocket = serverSocket.accept();
+                System.out.println("Client connected: " + clientSocket.getInetAddress());
+
+                // Handle each client in a separate thread
+                new Thread(() -> handleMessages(clientSocket)).start();
             }
-        });
-        listenerThread.start();
-        //listenerThread.stop(); //TODO: delete when making complete function
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+
     }
 
     private void waitForCompletion() {
@@ -621,17 +696,17 @@ public class peerProcess {
     }
 
     public static void main(String[] args) {
-        if (args.length != 1) {
-           System.out.println("Usage: java peerProcess <peerID>");
-           return;
-        }
+        // if (args.length != 1) {
+        //    System.out.println("Usage: java peerProcess <peerID>");
+        //    return;
+        // }
 
 
 
         System.out.println("Made it to main");
 
-        // int peerId = Integer.parseInt("1002");
-        int peerId = Integer.parseInt(args[0]);
+        int peerId = Integer.parseInt("1001");
+        // int peerId = Integer.parseInt(args[0]);
         peerProcess process = new peerProcess(peerId);
 
         try {
@@ -641,6 +716,8 @@ public class peerProcess {
             e.printStackTrace();
         }
         System.out.println("Program finished");
+
+
     }
 }
 

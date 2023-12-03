@@ -13,6 +13,16 @@
 
 *.zip
 
+peer_1001/
+peer_1002/
+peer_1003/
+peer_1004/
+peer_1005/
+peer_1006/
+peer_1007/
+peer_1008/
+peer_1009/
+
 # Mobile Tools for Java (J2ME)
 .mtj.tmp/
 
