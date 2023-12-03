@@ -69,5 +69,5 @@ public class CommonConfig {
         return numPieces;
 
     }
-    
+
 }
