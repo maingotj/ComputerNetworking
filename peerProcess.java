@@ -1,7 +1,11 @@
 import java.io.BufferedWriter;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.FileWriter;
+import java.io.File;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -19,6 +23,7 @@ import java.util.List;
 
 public class peerProcess {
 
+    private boolean allDone = false;
     public int index;
     private PeerInfo peerInfo;
     private int peerId;
@@ -28,6 +33,8 @@ public class peerProcess {
     private List<Peer> connectedPeers = new ArrayList<>();
     private HashMap<Integer, PeerInfo> map = new HashMap<>();
     private CommonConfig config;
+    private FileInputStream inputStream;
+    private FileOutputStream outputStream;
 
     private DataInputStream dataIn;
     private DataOutputStream dataOut;
@@ -112,43 +119,43 @@ public class peerProcess {
     }
 
     //sends a message for messages that require no payload
-    public void makeGenMessage(byte type) throws IOException {
-        MessageUtil.sendMessage(dataOut, type, null);
+    public void makeGenMessage(byte type, Peer peer) throws IOException {
+        MessageUtil.sendMessage(peer.getDataOut(), type, null);
     }
 
     // makes a have message
-    public  void makeHave() throws IOException{
+    public  void makeHave(Peer peer) throws IOException{
         byte type = 4;
 
         // index of 4 bytes for piece had
         byte[] index = new byte[4];
 
-        MessageUtil.sendMessage(dataOut, type, index); 
+        MessageUtil.sendMessage(peer.getDataOut(), type, index); 
     }
 
-    public void makeBitfieldMsg() throws IOException {
+    public void makeBitfieldMsg(Peer peer) throws IOException {
         byte type = 5;
 
         // converts bitfield to byte array
         byte[] payload = this.bitfield.toByteArray();
 
         //calls message function with payload
-        MessageUtil.sendMessage(dataOut, type, payload);
+        MessageUtil.sendMessage(peer.getDataOut(), type, payload);
     }
     
     // makes a request message
-    public  void makeRequest() throws IOException {
+    public  void makeRequest(Peer peer) throws IOException {
         byte type = 6;
 
         // index of requested piece
         byte[] index = new byte[4];
 
         //calls message function with payload
-        MessageUtil.sendMessage(dataOut, type, index); 
+        MessageUtil.sendMessage(peer.getDataOut(), type, index); 
     }
 
     // makes a piece message
-    public void makePiece() throws IOException {
+    public void makePiece(Peer peer) throws IOException {
         byte type = 7;
 
         // create byte array for the piece
@@ -158,7 +165,7 @@ public class peerProcess {
 
 
         //calls message function with payload
-        MessageUtil.sendMessage(dataOut, type, piece);
+        MessageUtil.sendMessage(peer.getDataOut(), type, piece);
     }
 
     /*  Log Method for TCP Connection
@@ -432,7 +439,8 @@ public class peerProcess {
     public void init() throws IOException {
         readConfigurations();
         initBitfield();
-
+        initFileStream();
+        
         if (peerId != allPeers.get(0).peerId) {
             connectToPreviousPeers();
         }
@@ -495,6 +503,15 @@ public class peerProcess {
         //System.out.println(numOfPieces);
     }
 
+    private void initFileStream() throws FileNotFoundException {
+
+
+        String filePath = "peer_" + this.peerId + "" + File.separator + config.getFileName();
+
+        outputStream = new FileOutputStream(filePath);
+        inputStream = new FileInputStream(filePath);
+    }
+
     // connects to any already made peers
     private void connectToPreviousPeers() {
         System.out.println("connect to prev");
@@ -514,9 +531,15 @@ public class peerProcess {
                         DataOutputStream out = peer.getDataOut();
 
 
-                        // comment this out
-                        String message = "heloooo";
-                        out.write(message.getBytes());
+                        // String message = "heloooo";
+                        // out.write(message.getBytes());
+
+                        while(!allDone) {//waits till all are checked to halt
+
+                            MessageUtil.Message message = MessageUtil.receiveMessage(in); //receive message
+                            parseMessage(message, peer);
+
+                        }
 
 
                         // byte[] buffer = new byte[1024];
@@ -578,6 +601,7 @@ public class peerProcess {
                         // out.write(responseMessage.getBytes());
 
                         Peer peer = new Peer(map.get(receivedPeerId));
+                        peer.connectedTo(in, out, socket);
 
                         connectedPeers.add(peer);
 

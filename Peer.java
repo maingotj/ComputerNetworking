@@ -22,6 +22,12 @@ public class Peer {
         dataOut = new DataOutputStream(socket.getOutputStream());
     }
 
+    public void connectedTo(DataInputStream dataInputStream, DataOutputStream dataOutputStream, Socket socketIn) {
+        socket = socketIn;
+        dataIn = dataInputStream;
+        dataOut = dataOutputStream;
+    }
+
     public DataInputStream getDataIn() {
         return dataIn;
     }
