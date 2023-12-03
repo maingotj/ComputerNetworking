@@ -18,6 +18,7 @@ public class peerProcess {
     private BitSet bitfield;
     private List<PeerInfo> allPeers = new ArrayList<>();
     private List<Peer> connectedPeers = new ArrayList<>();
+    private HashMap<Integer, PeerInfo> map = new HashMap<>();
     private CommonConfig config;
 
     private DataInputStream dataIn;
@@ -449,7 +450,8 @@ public class peerProcess {
                 if(this.peerId == id) {
                     this.peerInfo = new PeerInfo(id, hostName, port, hasFile);
                 }
-    
+
+                map.put(id, new PeerInfo(id, hostName, port, hasFile));
                 peers.add(new PeerInfo(id, hostName, port, hasFile));
             }
     
@@ -483,6 +485,29 @@ public class peerProcess {
                 peer.connectTo(info);
                 performHandshake(peer);
                 connectedPeers.add(peer);
+                Thread listenerThread = new Thread(() -> {
+  
+                    try {
+                        DataInputStream in = peer.getDataIn();
+                        DataOutputStream out = peer.getDataOut();
+
+
+                        // comment this out
+                        String message = "heloooo";
+                        out.write(message.getBytes());
+
+
+                        // byte[] buffer = new byte[1024];
+                        // int bytesRead = in.read(buffer);
+                        // String receivedMessage = new String(buffer, 0, bytesRead);
+                        // System.out.println("Received message from client: " + receivedMessage);
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                    
+
+                });
+                listenerThread.start();
             } catch (IOException e) {
                 System.out.println("Error connecting to peer " + info.peerId + ": " + e.getMessage());
             }
@@ -513,15 +538,28 @@ public class peerProcess {
                     while (true) {
                         
                         Socket socket = serverSocket.accept();
-                        this.dataIn = new DataInputStream(socket.getInputStream());
-                        this.dataOut = new DataOutputStream(socket.getOutputStream());
+                        DataInputStream in = new DataInputStream(socket.getInputStream());
+                        DataOutputStream out = new DataOutputStream(socket.getOutputStream());
 
-                        int receivedPeerId = MessageUtil.receiveHandshake(dataIn);
+                        int receivedPeerId = MessageUtil.receiveHandshake(in);
                         
                         
-                        MessageUtil.sendHandshake(dataOut, this.peerId);
+                        MessageUtil.sendHandshake(out, this.peerId);
                         System.out.println("Handshake successful with Peer " + receivedPeerId);
-                        // Handle the new connection (like adding to connectedPeers, etc.)
+
+                        // byte[] buffer = new byte[1024];
+                        // int bytesRead = in.read(buffer);
+                        // String receivedMessage = new String(buffer, 0, bytesRead);
+                        // System.out.println("Received message from client: " + receivedMessage);
+
+                        // String responseMessage = "Hello, client! Your message was received.";
+                        // out.write(responseMessage.getBytes());
+
+                        Peer peer = new Peer(map.get(receivedPeerId));
+
+                        connectedPeers.add(peer);
+
+
                     }
             } catch (IOException e) {
                 e.printStackTrace();
