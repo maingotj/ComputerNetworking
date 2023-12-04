@@ -12,6 +12,7 @@ public class Peer {
     private boolean interestedIn;
     private long lastDownloadTime;
     private int bytesDownloaded;
+    private int interestingPiece;
 
     public Peer(PeerInfo info) {
         this.info = info;
@@ -56,6 +57,14 @@ public class Peer {
 
     public boolean isInterestedIn() {
         return interestedIn;
+    }
+
+    public void setInterestingPiece(int piece) {
+        interestingPiece = piece;
+    }
+
+    public int interestingPiece() {
+        return interestingPiece;
     }
 
     public void close() throws IOException {
