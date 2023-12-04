@@ -1,9 +1,11 @@
+import java.util.BitSet;
+
 public class PeerInfo {
     public int peerId;
     public String hostName;
     public int port;
     public boolean hasFile;
-    public byte[] bitfield;
+    public BitSet bitfield;
 
     //peer info read from the peerinfo.cfg
     public PeerInfo(int peerId, String hostName, int port, boolean hasFile) {
@@ -13,11 +15,11 @@ public class PeerInfo {
         this.hasFile = hasFile;
     }
 
-    public void addBitfield(byte[] bitfield1) {
+    public void addBitfield(BitSet bitfield1) {
         bitfield = bitfield1;
     }
 
-    public byte[] getBitfield() {
+    public BitSet getBitfield() {
         return this.bitfield;
     }
 

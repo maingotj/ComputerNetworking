@@ -79,7 +79,7 @@ public class peerProcess {
     }
     
     private boolean amInterestedIn(Peer peer) {
-        BitSet theirBitfield = BitSet.valueOf(peer.getInfo().getBitfield()); 
+        BitSet theirBitfield = peer.getInfo().getBitfield(); 
         BitSet myBitfield = peerProcess.getBitfield(); 
         theirBitfield.andNot(myBitfield);
         return !theirBitfield.isEmpty();
@@ -92,17 +92,6 @@ public class peerProcess {
         int index = buf.getInt();
 
         //TODO: add bitfield change
-
-    }
-
-     // record bitfield of user ID
-    public void bitfield(MessageUtil.Message message, Peer peer) {
-        PeerInfo peerInfo = peer.getInfo();
-
-        //adds bitfield to the peers info
-        peerInfo.addBitfield(message.getPayload());
-
-        System.out.println("bitfield recieved " + message.getPayload().length);
 
     }
 
@@ -204,6 +193,7 @@ public class peerProcess {
         MessageUtil.sendMessage(peer.getDataOut(), type, message);
     }
 
+    //#region
     /*  Log Method for TCP Connection
         Whenever a peer makes a TCP connection to other peer, it generates the following log:
         [Time]: Peer [peer_ID 1] makes a connection to Peer [peer_ID 2].
@@ -471,6 +461,7 @@ public class peerProcess {
             e.printStackTrace();
         }
     }
+    //#endregion
 
     public void init() throws IOException {
         readConfigurations();
@@ -585,7 +576,7 @@ public class peerProcess {
                         // String message = "heloooo";
                         // out.write(message.getBytes());
 
-                        makeBitfieldMsg(peer);
+                        performBitfieldExchange(peer);
 
                         while(!allDone) {//waits till all are checked to halt
 
@@ -629,6 +620,60 @@ public class peerProcess {
 
         
     }
+    public boolean hasInterestingPieces(BitSet receivedBitfield) {
+        // Check if the received bitfield has any pieces that the other peer has and you don't
+        BitSet myBitfield = this.bitfield;
+        BitSet interestingPieces = (BitSet) receivedBitfield.clone();
+        interestingPieces.andNot(myBitfield);
+        // If there are interesting pieces, return true
+        if (!interestingPieces.isEmpty()) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+    public void bitfield(MessageUtil.Message message, Peer peer) {
+        PeerInfo peerInfo = peer.getInfo();
+        // Get the received bitfield
+        BitSet receivedBitfield = BitSet.valueOf(message.getPayload());
+        // Add the bitfield to the peer's info
+        peerInfo.addBitfield(receivedBitfield);
+        // Check if the received bitfield has any pieces that the current peer doesn't have
+        if (hasInterestingPieces(receivedBitfield)) {
+            try {
+                // If interested, send an "interested" message
+                makeGenMessage(MessageUtil.INTERESTED, peer);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        } else {
+            try {
+                // If not interested, send a "not interested" message
+                makeGenMessage(MessageUtil.NOT_INTERESTED, peer);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+    // Method to send the initial bitfield message when a connection is established
+    private void sendInitialBitfield(Peer peer) {
+        try {
+            // Convert the local bitfield to a byte array
+            byte[] payload = this.bitfield.toByteArray();
+            // Send the "bitfield" message using MessageUtil
+            MessageUtil.sendMessage(peer.getDataOut(), MessageUtil.BITFIELD, payload);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+    // Method to perform the initial exchange of bitfields after the handshake
+    private void performBitfieldExchange(Peer peer) throws IOException {
+        // Send the local bitfield to the connected peer
+        sendInitialBitfield(peer);
+        // Receive and process the bitfield from the connected peer
+        MessageUtil.Message bitfieldMessage = MessageUtil.receiveMessage(peer.getDataIn());
+        parseMessage(bitfieldMessage, peer);
+    }
 
     private void handleMessages(Socket socket) {
 
@@ -655,7 +700,7 @@ public class peerProcess {
 
                         connectedPeers.add(peer);
 
-                        makeBitfieldMsg(peer);
+                        performBitfieldExchange(peer);
 
                         while(!allDone) {//waits till all are checked to halt
 
@@ -669,7 +714,7 @@ public class peerProcess {
         }
 
     }
-
+    
 
     // listens for any new connections 
     private void listenForConnections() throws IOException {
