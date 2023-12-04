@@ -17,6 +17,7 @@ import java.util.*;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 
 
@@ -31,6 +32,8 @@ public class peerProcess {
     private List<PeerInfo> allPeers = new ArrayList<>();
     private List<Peer> connectedPeers = new ArrayList<>();
     private HashMap<Integer, PeerInfo> map = new HashMap<>();
+    Set<Peer> preferredNeighbors;
+    Peer optimisticallyUnchokedNeighbor;
     private CommonConfig config;
     private FileInputStream inputStream;
     private FileOutputStream outputStream;
@@ -484,11 +487,173 @@ public class peerProcess {
 
         listenForConnections();
 
+        // Start the choking and unchoking process in a new thread
+        new Thread(() ->{
+            try {
+                startChokingUnchoking();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }).start();
+
+        // Start the optimistic unchoking process in another new thread
+        new Thread(() ->{
+            try {
+                startOptimisticUnchoking();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }).start();
+
         // Begin exchanging pieces here...
 
         // Wait for all peers to download the complete file, then terminate.
         waitForCompletion();
     }
+    // Start the choking and unchoking process
+    public void startChokingUnchoking() throws IOException {
+        while (!allDone) {
+            try {
+                // Calculate download rates and select preferred neighbors
+                List<Peer> preferredNeighbors = calculatePreferredNeighbors();
+
+                // Send unchoke messages to preferred neighbors
+                for (Peer preferredNeighbor : preferredNeighbors) {
+                    // Set choked to false
+                    preferredNeighbor.setChoking(false);
+                    // Send unchoke message to the peer
+                    makeGenMessage(MessageUtil.UNCHOKE, preferredNeighbor);
+                }
+
+                // Choke all other neighbors
+                chokeNonPreferredNeighbors(preferredNeighbors);
+
+                // Sleep for the specified interval
+                Thread.sleep(config.getUnchokingInterval() * 1000); // Convert seconds to milliseconds
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    // Start the optimistic unchoking process
+    public void startOptimisticUnchoking() throws IOException {
+        while (!allDone) {
+            try {
+                // Select an optimistically unchoked neighbor
+                Peer optimisticNeighbor = selectOptimisticNeighbor();
+                if(optimisticNeighbor != null){
+                    // Set Choking to false
+                    optimisticNeighbor.setChoking(false);
+                    // Send unchoke message to the optimistic neighbor
+                    makeGenMessage(MessageUtil.UNCHOKE, optimisticNeighbor);
+                }
+
+                // Sleep for the specified interval
+                Thread.sleep(config.getOptimisticUnchokingInterval() * 1000); // Convert seconds to milliseconds
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+    public List<Peer> getInterestedPeersAmongConnected() {
+        List<Peer> interestedPeers = new ArrayList<>();
+    
+        for (Peer connectedPeer : connectedPeers) {
+            if (connectedPeer.isInterestedIn()) {
+                interestedPeers.add(connectedPeer);
+            }
+        }
+    
+        return interestedPeers;
+    }
+
+    public List<Peer> calculatePreferredNeighbors() {
+        List<Peer> interestedPeers = getInterestedPeersAmongConnected();
+
+        // Calculate download rates for each peer
+        Map<Peer, Double> downloadRates = calculateDownloadRates(interestedPeers);
+
+        // Sort peers by download rate in descending order
+        List<Peer> sortedPeers = interestedPeers.stream()
+        .sorted(Comparator.comparingDouble(downloadRates::get)
+                .thenComparing(peer -> Math.random())) // Secondary RANDOM sort for ties
+        .collect(Collectors.toList());
+
+        // Select the top k peers as preferred neighbors
+        int k = Math.min(config.getNumberOfPreferredNeighbors(), sortedPeers.size());
+        return sortedPeers.subList(0, k);
+    }
+    public Map<Peer, Double> calculateDownloadRates(List<Peer> peers) {
+        Map<Peer, Double> downloadRates = new HashMap<>();
+    
+        for (Peer peer : peers) {
+            double downloadRate = calculateDownloadRate(peer);
+            downloadRates.put(peer, downloadRate);
+        }
+    
+        return downloadRates;
+    }
+    
+    public double calculateDownloadRate(Peer peer) {
+        long currentTime = System.currentTimeMillis();
+        long lastDownloadTime = peer.getLastDownloadTime(); // Replace with your actual method to get the last download time
+        int bytesDownloaded = peer.getBytesDownloaded(); // Replace with your actual method to get the bytes downloaded
+
+        // Calculate time taken to download the last pieces
+        double timeTakenInMilliseconds = (currentTime - lastDownloadTime);
+
+        // Calculate download rate in bytes per millisecond
+        if (timeTakenInMilliseconds > 0) {
+            return bytesDownloaded / timeTakenInMilliseconds;
+        } else {
+            return 0.0; // Avoid division by zero
+        }
+    }
+
+    public void chokeNonPreferredNeighbors(List<Peer> preferredNeighbors) {
+        for (Peer connectedPeer : connectedPeers) {
+            if (!preferredNeighbors.contains(connectedPeer)) {
+                // Choke non-preferred neighbors
+                try {
+                    // Set choked to true
+                    connectedPeer.setChoking(true);
+                    // Send message to Choke
+                    makeGenMessage(MessageUtil.CHOKE, connectedPeer);
+
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+    }
+
+    public Peer selectOptimisticNeighbor() {
+    List<Peer> chokedInterestedPeers = getChokedInterestedPeers();
+
+    if (!chokedInterestedPeers.isEmpty()) {
+        // Randomly select an optimistically unchoked neighbor
+        Random random = new Random();
+        int randomIndex = random.nextInt(chokedInterestedPeers.size());
+        Peer optimisticNeighbor = chokedInterestedPeers.get(randomIndex);
+
+        return optimisticNeighbor;
+    }
+
+    return null;
+}
+
+private List<Peer> getChokedInterestedPeers() {
+    List<Peer> chokedInterestedPeers = new ArrayList<>();
+
+    for (Peer connectedPeer : connectedPeers) {
+        if (!connectedPeer.isChoking() && connectedPeer.isInterestedIn()) {
+            chokedInterestedPeers.add(connectedPeer);
+        }
+    }
+
+    return chokedInterestedPeers;
+}
 
     private void readConfigurations() throws IOException {
         config = new CommonConfig();

@@ -11,6 +11,8 @@ public class Peer {
     private boolean interestFrom;
     private boolean choking;
     private boolean interestedIn;
+    private long lastDownloadTime;
+    private int bytesDownloaded;
     private int interestingPiece;
 
     public Peer(PeerInfo info) {
@@ -88,5 +90,19 @@ public class Peer {
     // set whether current peer is interested in this peer
     public void setInterestIn(boolean receiveInterest) {
         interestedIn = receiveInterest;
+    }
+
+    public long getLastDownloadTime(){
+        return lastDownloadTime;
+    }
+    public void setLastDownloadTime(long lastTime){
+        lastDownloadTime = lastTime;
+    }
+
+    public int getBytesDownloaded(){
+        return bytesDownloaded;
+    }
+    public void setBytesDownloaded(int bytesDown){
+        bytesDownloaded = bytesDown;
     }
 }
