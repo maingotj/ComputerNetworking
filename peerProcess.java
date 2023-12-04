@@ -147,18 +147,6 @@ public class peerProcess {
 
         MessageUtil.sendMessage(peer.getDataOut(), type, payload); 
     }
-
-    public void makeBitfieldMsg(Peer peer) throws IOException {
-        byte type = 5;
-
-        // converts bitfield to byte array
-        byte[] payload = this.bitfield.toByteArray();
-
-        //calls message function with payload
-        MessageUtil.sendMessage(peer.getDataOut(), type, payload);
-
-        System.out.println("Sent Bitfield " + payload.length);
-    }
     
     // makes a request message
     public  void makeRequest(Peer peer, int index) throws IOException {
@@ -643,6 +631,7 @@ public class peerProcess {
             try {
                 // If interested, send an "interested" message
                 makeGenMessage(MessageUtil.INTERESTED, peer);
+                System.out.println("Sent Interested Message");
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -650,6 +639,7 @@ public class peerProcess {
             try {
                 // If not interested, send a "not interested" message
                 makeGenMessage(MessageUtil.NOT_INTERESTED, peer);
+                System.out.println("Sent NOT Interested Message");
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -670,8 +660,10 @@ public class peerProcess {
     private void performBitfieldExchange(Peer peer) throws IOException {
         // Send the local bitfield to the connected peer
         sendInitialBitfield(peer);
+        System.out.println("Sent Bitfield");
         // Receive and process the bitfield from the connected peer
         MessageUtil.Message bitfieldMessage = MessageUtil.receiveMessage(peer.getDataIn());
+        System.out.println("Recieved Bitfield");
         parseMessage(bitfieldMessage, peer);
     }
 
