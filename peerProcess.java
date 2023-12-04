@@ -94,7 +94,6 @@ public class peerProcess {
         ByteBuffer buf = ByteBuffer.wrap(message.getPayload());
         int index = buf.getInt();
 
-        peer.setInterestingPiece(index);
 
         try {
             makePiece(peer, index);
@@ -120,6 +119,10 @@ public class peerProcess {
 
             logPieceDownload(this.peerId, peer.getInfo().peerId, pIndex, ++numBits);
             dontHave.remove(pIndex);
+
+            for(Peer p: connectedPeers) {
+                p.addToHash(pIndex);
+            }
         }
 
 
@@ -165,11 +168,28 @@ public class peerProcess {
 
         //TODO: add random index value
         // index of requested piece
-        int i = 0;
-        Random rand = new Random();
-        int index = 0;
-        boolean found = false;
+        int size = 0;
+        int index= 0;
 
+        BitSet myBitfield = this.bitfield;
+        BitSet interestingPieces = (BitSet) peer.getInfo().getBitfield().clone();
+        interestingPieces.andNot(myBitfield);
+
+        for (int i = interestingPieces.nextSetBit(0); i != -1; i = interestingPieces.nextSetBit(i + 1)) {
+            size++;
+        }
+
+
+        Random rand = new Random();
+        int random = rand.nextInt(size - 1);
+        
+
+        int j = 0;
+        for (int i = interestingPieces.nextSetBit(0); i != -1; i = interestingPieces.nextSetBit(i + 1)) {
+            if(j == random) {
+                index = i;
+            }
+        }
         
 
         byte[] payload = ByteBuffer.allocate(4).putInt(index).array();
@@ -896,8 +916,15 @@ private List<Peer> getChokedInterestedPeers() {
                             MessageUtil.Message message = MessageUtil.receiveMessage(in); //receive message
                             parseMessage(message, peer);
 
-                            if(peer.isInterestedIn() && !peer.isChoking()) {
+                            if(!peer.isChoking()) {
+                                makeRequest(peer);
+                            }
 
+                            if(peer.getHash().size() != 0) {
+                                for(int index: peer.getHash()) {
+                                    makeHave(peer, index);
+                                    peer.removeFromHash(index);
+                                }
                             }
 
                         }
