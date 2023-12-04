@@ -91,12 +91,26 @@ public class peerProcess {
         ByteBuffer buf = ByteBuffer.wrap(message.getPayload());
         int index = buf.getInt();
 
+        peer.getInfo().getBitfield().set(index);
+
         //TODO: add bitfield change
 
     }
 
     public void request(MessageUtil.Message message, Peer peer) {
         // record request of which piece(s) a user ID wants
+
+        ByteBuffer buf = ByteBuffer.wrap(message.getPayload());
+        int index = buf.getInt();
+
+        peer.setInterestingPiece(index);
+
+        try {
+            makePiece(peer, index);
+        } catch (IOException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
     }
 
     public void piece(MessageUtil.Message message, Peer peer) {
@@ -531,13 +545,20 @@ public class peerProcess {
         int numOfPieces = (int) Math.ceil((double) config.getFileSize() / config.getPieceSize());
         this.bitfield = new BitSet(numOfPieces);
 
-        System.out.println(bitfield.size());
+        // System.out.println(bitfield.size());
 
         if (hasFile) {
             bitfield.set(0, numOfPieces);
         }
 
-        System.out.println(numOfPieces);
+        StringBuilder s = new StringBuilder();
+            for( int i = 0; i < bitfield.length();  i++ )
+            {
+                s.append( bitfield.get( i ) == true ? 1: 0 );
+            }
+
+            // System.out.println( s );
+            // System.out.println(bitfield.size());
     }
 
     private void initFileStream() throws FileNotFoundException {
@@ -556,6 +577,7 @@ public class peerProcess {
 
     // connects to any already made peers
     private void connectToPreviousPeers() {
+        System.out.println(this.bitfield.size());
         System.out.println("connect to prev");
         for (PeerInfo info : allPeers) {
             if (info.peerId >= this.peerId) {
@@ -706,6 +728,10 @@ public class peerProcess {
 
                             MessageUtil.Message message = MessageUtil.receiveMessage(in); //receive message
                             parseMessage(message, peer);
+
+                            if(peer.isInterestedIn() && !peer.isChoking()) {
+
+                            }
 
                         }
 
