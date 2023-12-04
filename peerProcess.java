@@ -42,6 +42,7 @@ public class peerProcess {
     private FileOutputStream outputStream;
     private int numChoked = 0;
     private  byte[] fileArr;
+    private int numBits = 0;
 
     private DataInputStream dataIn;
     private DataOutputStream dataOut;
@@ -83,6 +84,8 @@ public class peerProcess {
 
         peer.getInfo().getBitfield().set(index);
 
+        logHaveMessage(this.peerId, peer.getInfo().peerId, index);
+
         //TODO: add bitfield change
 
     }
@@ -114,6 +117,9 @@ public class peerProcess {
         int pIndex = buf.getInt();
 
         System.arraycopy(piece, 0, fileArr, pIndex * (int) config.getPieceSize(), piece.length);
+        bitfield.set(pIndex);
+
+        logPieceDownload(this.peerId, peer.getInfo().peerId, pIndex, ++numBits);
 
 
         // TODO: change bitfield
@@ -156,6 +162,7 @@ public class peerProcess {
     public  void makeRequest(Peer peer, int index) throws IOException {
         byte type = 6;
 
+        //TODO: add random index value
         // index of requested piece
         byte[] payload = ByteBuffer.allocate(4).putInt(index).array();
 
