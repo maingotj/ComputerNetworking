@@ -13,10 +13,10 @@ public class Peer {
     private boolean interestedIn;
     private long lastDownloadTime;
     private int bytesDownloaded;
-    private int interestingPiece;
-
+    private HashSet<Integer> newPieces;
     public Peer(PeerInfo info) {
         this.info = info;
+        newPieces = new HashSet<>();
     }
 
     // keeps record of what socket each peer has and the data streams
@@ -30,6 +30,18 @@ public class Peer {
         socket = socketIn;
         dataIn = dataInputStream;
         dataOut = dataOutputStream;
+    }
+
+    public void addToHash(int index) {
+        newPieces.add(index);
+    }
+
+    public void removeFromHash(int index) {
+        newPieces.remove(index);
+    }
+
+    public HashSet<Integer> getHash() {
+        return newPieces;
     }
 
     public DataInputStream getDataIn() {
@@ -60,13 +72,6 @@ public class Peer {
         return interestedIn;
     }
 
-    public void setInterestingPiece(int piece) {
-        interestingPiece = piece;
-    }
-
-    public int interestingPiece() {
-        return interestingPiece;
-    }
 
     public void close() throws IOException {
         socket.close();

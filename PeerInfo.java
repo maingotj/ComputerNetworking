@@ -7,7 +7,6 @@ public class PeerInfo {
     public int port;
     public boolean hasFile;
     public BitSet bitfield;
-    public HashSet<Integer> neededPieces;
 
     // peer info read from the peerinfo.cfg
     public PeerInfo(int peerId, String hostName, int port, boolean hasFile) {
@@ -19,14 +18,6 @@ public class PeerInfo {
 
     public void addBitfield(BitSet bitfield1) {
         bitfield = bitfield1;
-
-        if (this.neededPieces == null) {
-            this.neededPieces = new HashSet<>();
-        }
-        
-        for (int i = bitfield.nextSetBit(0); i != -1; i = bitfield.nextSetBit(i + 1)) {
-            neededPieces.add(i);
-        }
     }
 
     public BitSet getBitfield() {
