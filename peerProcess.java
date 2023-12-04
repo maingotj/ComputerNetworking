@@ -16,6 +16,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.BitSet;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
@@ -582,18 +583,23 @@ public class peerProcess {
     public List<Peer> calculatePreferredNeighbors() {
         List<Peer> interestedPeers = getInterestedPeersAmongConnected();
 
-        // Calculate download rates for each peer
-        Map<Peer, Double> downloadRates = calculateDownloadRates(interestedPeers);
+        if (hasFile) {
+            // If peer has a complete file, shuffle the interested peers randomly
+            Collections.shuffle(interestedPeers);
+        } else {
+            // Calculate download rates for each peer
+            Map<Peer, Double> downloadRates = calculateDownloadRates(interestedPeers);
 
-        // Sort peers by download rate in descending order
-        List<Peer> sortedPeers = interestedPeers.stream()
-        .sorted(Comparator.comparingDouble(downloadRates::get)
-                .thenComparing(peer -> Math.random())) // Secondary RANDOM sort for ties
-        .collect(Collectors.toList());
+            // Sort peers by download rate in descending order
+            interestedPeers = interestedPeers.stream()
+            .sorted(Comparator.comparingDouble(downloadRates::get)
+                    .thenComparing(peer -> Math.random())) // Secondary RANDOM sort for ties
+            .collect(Collectors.toList());
+        }
 
         // Select the top k peers as preferred neighbors
-        int k = Math.min(config.getNumberOfPreferredNeighbors(), sortedPeers.size());
-        return sortedPeers.subList(0, k);
+        int k = Math.min(config.getNumberOfPreferredNeighbors(), interestedPeers.size());
+        return interestedPeers.subList(0, k);
     }
     public Map<Peer, Double> calculateDownloadRates(List<Peer> peers) {
         Map<Peer, Double> downloadRates = new HashMap<>();
