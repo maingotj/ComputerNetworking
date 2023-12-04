@@ -135,6 +135,8 @@ public class peerProcess {
             for(Peer p: connectedPeers) {
                 p.addToHash(pIndex);
             }
+            // Update bytesDownloaded for the peer
+            peer.setBytesDownloaded(peer.getBytesDownloaded() + piece.length);
         }
 
 
@@ -650,7 +652,9 @@ public class peerProcess {
 
     public void chokeNonPreferredNeighbors(List<Peer> preferredNeighbors) {
         for (Peer connectedPeer : connectedPeers) {
-            if (!preferredNeighbors.contains(connectedPeer)) {
+            connectedPeer.setLastDownloadTime(System.currentTimeMillis());
+            connectedPeer.setBytesDownloaded(0);
+            if (!preferredNeighbors.contains(connectedPeer) && connectedPeer != optimisticallyUnchokedNeighbor) {
                 // Choke non-preferred neighbors
                 try {
                     // Set choked to true

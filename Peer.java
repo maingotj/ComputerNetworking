@@ -17,6 +17,9 @@ public class Peer {
     public Peer(PeerInfo info) {
         this.info = info;
         newPieces = new HashSet<>();
+        // Initialize lastDownloadTime and bytesDownloaded
+        this.lastDownloadTime = System.currentTimeMillis();
+        this.bytesDownloaded = 0;
     }
 
     // keeps record of what socket each peer has and the data streams
