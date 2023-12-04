@@ -50,7 +50,7 @@ public class peerProcess {
     private int numChoked = 0;
     private  byte[] fileArr;
     private int numBits = 0;
-    private HashSet<Integer> dontHave;
+    private HashSet<Integer> dontHave = new HashSet<>();
     private ServerSocket serverSocket;
 
     private DataInputStream dataIn;
@@ -65,13 +65,16 @@ public class peerProcess {
     }
 
 
-    public static void choke(Peer peer) {
-        // record as being choked by other user 
+    public void choke(Peer peer) {
+        peer.setChokedBy(true);
+        logChokingEvent(this.peerId, peer.getInfo().peerId);
     }
 
-    public static void unchoke(Peer peer) {
-
+    public void unchoke(Peer peer) {
         // record being unchoked by other user
+
+        peer.setChokedBy(false);
+        logUnchokingEvent(this.peerId, peer.getInfo().peerId);
 
     }
 
@@ -124,9 +127,15 @@ public class peerProcess {
         ByteBuffer buf = ByteBuffer.wrap(index);
         int pIndex = buf.getInt();
 
+        //System.out.println(pIndex + " " + pIndex * (int)config.getPieceSize() + " " + piece.length);
+
+
         if(dontHave.contains(pIndex)) {
+            System.err.println("piece");
             System.arraycopy(piece, 0, fileArr, pIndex * (int) config.getPieceSize(), piece.length);
             bitfield.set(pIndex);
+
+            System.err.println("got the stuff" + bitfield.get(pIndex));
 
             logPieceDownload(this.peerId, peer.getInfo().peerId, pIndex, ++numBits);
             dontHave.remove(pIndex);
@@ -160,6 +169,13 @@ public class peerProcess {
 
     //sends a message for messages that require no payload
     public void makeGenMessage(byte type, Peer peer) throws IOException {
+        if(type == MessageUtil.INTERESTED) {
+            peer.setInterestedBy(true);
+        }
+        else if(type == MessageUtil.NOT_INTERESTED) {
+            peer.setInterestedBy(false);
+        }
+
         MessageUtil.sendMessage(peer.getDataOut(), type, null);
     }
 
@@ -190,20 +206,33 @@ public class peerProcess {
             size++;
         }
 
+        //System.out.println(size);
 
+        int random = 1;
         Random rand = new Random();
-        int random = rand.nextInt(size - 1);
+        // System.out.println(size);
+        if(size == 1) {
+            random = 1;
+        }
+        else {
+            random = rand.nextInt(size - 1);
+        }
         
+        //System.out.println(random);
+
 
         int j = 0;
         for (int i = interestingPieces.nextSetBit(0); i != -1; i = interestingPieces.nextSetBit(i + 1)) {
             if(j == random) {
                 index = i;
             }
+            j++;
         }
         
 
         byte[] payload = ByteBuffer.allocate(4).putInt(index).array();
+
+        //System.out.println("sent piece to " + index);
 
         //calls message function with payload
         MessageUtil.sendMessage(peer.getDataOut(), type, payload); 
@@ -730,9 +759,8 @@ private List<Peer> getChokedInterestedPeers() {
     private void initBitfield() {
         int numOfPieces = (int) Math.ceil((double) config.getFileSize() / config.getPieceSize());
         this.bitfield = new BitSet(numOfPieces);
-        dontHave = new HashSet<Integer>();
 
-        // System.out.println(bitfield.size());
+        // //System.out.println(bitfield.size());
 
         if (hasFile) {
             bitfield.set(0, numOfPieces);
@@ -743,6 +771,8 @@ private List<Peer> getChokedInterestedPeers() {
             }
         }
 
+        System.out.println("dont have size " + dontHave.size());
+
 
 
         // StringBuilder s = new StringBuilder();
@@ -751,8 +781,8 @@ private List<Peer> getChokedInterestedPeers() {
         //         s.append( bitfield.get( i ) == true ? 1: 0 );
         //     }
 
-            // System.out.println( s );
-            // System.out.println(bitfield.size());
+            // //System.out.println( s );
+            // //System.out.println(bitfield.size());
     }
 
     private void initFileStream() throws FileNotFoundException {
@@ -771,8 +801,8 @@ private List<Peer> getChokedInterestedPeers() {
 
     // connects to any already made peers
     private void connectToPreviousPeers() {
-        System.out.println(this.bitfield.size());
-        System.out.println("connect to prev");
+        //System.out.println(this.bitfield.size());
+        //System.out.println("connect to prev");
         for (PeerInfo info : allPeers) {
             if (info.peerId >= this.peerId) {
                 break;
@@ -799,6 +829,18 @@ private List<Peer> getChokedInterestedPeers() {
                             MessageUtil.Message message = MessageUtil.receiveMessage(in); //receive message
                             parseMessage(message, peer);
 
+                            if(!peer.isChoking() && peer.isInterestedBy()) {
+                                makeRequest(peer);
+                            }
+
+                            if(peer.getHash().size() != 0) {
+                                System.out.println("sending have");
+                                for(int index: peer.getHash()) {
+                                    makeHave(peer, index);
+                                    peer.removeFromHash(index);
+                                }
+                            }
+
                         }
 
 
@@ -806,7 +848,7 @@ private List<Peer> getChokedInterestedPeers() {
                         // byte[] buffer = new byte[1024];
                         // int bytesRead = in.read(buffer);
                         // String receivedMessage = new String(buffer, 0, bytesRead);
-                        // System.out.println("Received message from client: " + receivedMessage);
+                        // //System.out.println("Received message from client: " + receivedMessage);
                     } catch (IOException e) {
                         e.printStackTrace();
                     }
@@ -815,7 +857,7 @@ private List<Peer> getChokedInterestedPeers() {
                 });
                 listenerThread.start();
             } catch (IOException e) {
-                System.out.println("Error connecting to peer " + info.peerId + ": " + e.getMessage());
+                //System.out.println("Error connecting to peer " + info.peerId + ": " + e.getMessage());
             }
         }
     }
@@ -832,7 +874,7 @@ private List<Peer> getChokedInterestedPeers() {
         logTCPConnection(this.peerId, receivedPeerId);
         // logs that the connection occured
 
-        System.out.println("Handshake successful with Peer " + receivedPeerId);
+        //System.out.println("Handshake successful with Peer " + receivedPeerId);
 
         
     }
@@ -859,7 +901,7 @@ private List<Peer> getChokedInterestedPeers() {
             try {
                 // If interested, send an "interested" message
                 makeGenMessage(MessageUtil.INTERESTED, peer);
-                System.out.println("Sent Interested Message");
+                //System.out.println("Sent Interested Message");
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -867,7 +909,7 @@ private List<Peer> getChokedInterestedPeers() {
             try {
                 // If not interested, send a "not interested" message
                 makeGenMessage(MessageUtil.NOT_INTERESTED, peer);
-                System.out.println("Sent NOT Interested Message");
+                //System.out.println("Sent NOT Interested Message");
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -888,10 +930,10 @@ private List<Peer> getChokedInterestedPeers() {
     private void performBitfieldExchange(Peer peer) throws IOException {
         // Send the local bitfield to the connected peer
         sendInitialBitfield(peer);
-        System.out.println("Sent Bitfield");
+        //System.out.println("Sent Bitfield");
         // Receive and process the bitfield from the connected peer
         MessageUtil.Message bitfieldMessage = MessageUtil.receiveMessage(peer.getDataIn());
-        System.out.println("Recieved Bitfield");
+        //System.out.println("Recieved Bitfield");
         parseMessage(bitfieldMessage, peer);
     }
 
@@ -905,12 +947,12 @@ private List<Peer> getChokedInterestedPeers() {
                         
                         
                         MessageUtil.sendHandshake(out, this.peerId);
-                        System.out.println("Handshake successful with Peer " + receivedPeerId);
+                        //System.out.println("Handshake successful with Peer " + receivedPeerId);
 
                         // byte[] buffer = new byte[1024];
                         // int bytesRead = in.read(buffer);
                         // String receivedMessage = new String(buffer, 0, bytesRead);
-                        // System.out.println("Received message from client: " + receivedMessage);
+                        // //System.out.println("Received message from client: " + receivedMessage);
 
                         // String responseMessage = "Hello, client! Your message was received.";
                         // out.write(responseMessage.getBytes());
@@ -927,7 +969,7 @@ private List<Peer> getChokedInterestedPeers() {
                             MessageUtil.Message message = MessageUtil.receiveMessage(in); //receive message
                             parseMessage(message, peer);
 
-                            if(!peer.isChoking()) {
+                            if(!peer.isChoking() && peer.isInterestedBy()) {
                                 makeRequest(peer);
                             }
 
@@ -949,7 +991,7 @@ private List<Peer> getChokedInterestedPeers() {
 
     // listens for any new connections 
     private void listenForConnections() throws IOException {
-        System.out.println("listening on port" + this.peerInfo.port);
+        //System.out.println("listening on port" + this.peerInfo.port);
 
         try {
             serverSocket = new ServerSocket(this.peerInfo.port);
@@ -957,7 +999,7 @@ private List<Peer> getChokedInterestedPeers() {
 
             while (true) {
                 Socket clientSocket = serverSocket.accept();
-                System.out.println("Client connected: " + clientSocket.getInetAddress());
+                //System.out.println("Client connected: " + clientSocket.getInetAddress());
 
                 // Handle each client in a separate thread
                 new Thread(() -> handleMessages(clientSocket)).start();
@@ -987,7 +1029,7 @@ private List<Peer> getChokedInterestedPeers() {
     
             // If all peers have completed their downloads, perform shutdown operations
             if (allCompleted) {
-                System.out.println("All peers have completed downloading. Shutting down...");
+                //System.out.println("All peers have completed downloading. Shutting down...");
                 shutdown();
                 scheduler.shutdownNow(); // Stop the scheduled task
             }
@@ -1004,13 +1046,13 @@ private List<Peer> getChokedInterestedPeers() {
 
     // Method to perform shutdown operations
 private void shutdown() {
-    System.out.println("Shutting down the peer process...");
+    //System.out.println("Shutting down the peer process...");
 
     // Close all peer connections
     for (Peer peer : connectedPeers) {
         try {
             peer.close();
-            System.out.println("Closed connection with Peer " + peer.getInfo().peerId);
+            //System.out.println("Closed connection with Peer " + peer.getInfo().peerId);
         } catch (IOException e) {
             System.err.println("Error closing connection with Peer " + peer.getInfo().peerId);
             e.printStackTrace();
@@ -1021,7 +1063,7 @@ private void shutdown() {
     if (serverSocket != null && !serverSocket.isClosed()) {
         try {
             serverSocket.close();
-            System.out.println("Server socket closed.");
+            //System.out.println("Server socket closed.");
         } catch (IOException e) {
             System.err.println("Error closing server socket.");
             e.printStackTrace();
@@ -1032,7 +1074,7 @@ private void shutdown() {
     if (inputStream != null) {
         try {
             inputStream.close();
-            System.out.println("Input stream closed.");
+            //System.out.println("Input stream closed.");
         } catch (IOException e) {
             System.err.println("Error closing input stream.");
             e.printStackTrace();
@@ -1042,26 +1084,26 @@ private void shutdown() {
     if (outputStream != null) {
         try {
             outputStream.close();
-            System.out.println("Output stream closed.");
+            //System.out.println("Output stream closed.");
         } catch (IOException e) {
             System.err.println("Error closing output stream.");
             e.printStackTrace();
         }
     }
 
-    System.out.println("Peer process shutdown complete.");
+    //System.out.println("Peer process shutdown complete.");
 }
 
 
     public static void main(String[] args) {
         if (args.length != 1) {
-           System.out.println("Usage: java peerProcess <peerID>");
+           //System.out.println("Usage: java peerProcess <peerID>");
            return;
         }
 
 
 
-        System.out.println("Made it to main");
+        //System.out.println("Made it to main");
 
         // int peerId = Integer.parseInt("1001");
         int peerId = Integer.parseInt(args[0]);
@@ -1073,7 +1115,7 @@ private void shutdown() {
         } catch (IOException e) {
             e.printStackTrace();
         }
-        System.out.println("Program finished");
+        //System.out.println("Program finished");
 
 
     }
