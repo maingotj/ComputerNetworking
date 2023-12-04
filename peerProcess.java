@@ -30,9 +30,6 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
-
-
-
 public class peerProcess {
 
     private boolean allDone = false;
@@ -1002,12 +999,10 @@ public class peerProcess {
         }
 
     }
-    
 
     // listens for any new connections 
     private void listenForConnections() throws IOException {
         System.out.println("listening on port" + this.peerInfo.port);
-
         try {
             serverSocket = new ServerSocket(this.peerInfo.port);
 
@@ -1023,8 +1018,6 @@ public class peerProcess {
         } catch (IOException e) {
             e.printStackTrace();
         }
-
-
     }
 
     private void waitForCompletion() {
@@ -1060,54 +1053,54 @@ public class peerProcess {
     }
 
     // Method to perform shutdown operations
-private void shutdown() {
-    System.out.println("Shutting down the peer process...");
+    private void shutdown() {
+        System.out.println("Shutting down the peer process...");
 
-    // Close all peer connections
-    for (Peer peer : connectedPeers) {
-        try {
-            peer.close();
-            System.out.println("Closed connection with Peer " + peer.getInfo().peerId);
-        } catch (IOException e) {
-            System.err.println("Error closing connection with Peer " + peer.getInfo().peerId);
-            e.printStackTrace();
+        // Close all peer connections
+        for (Peer peer : connectedPeers) {
+            try {
+                peer.close();
+                System.out.println("Closed connection with Peer " + peer.getInfo().peerId);
+            } catch (IOException e) {
+                System.err.println("Error closing connection with Peer " + peer.getInfo().peerId);
+                e.printStackTrace();
+            }
         }
-    }
 
-    // Close server socket if open
-    if (serverSocket != null && !serverSocket.isClosed()) {
-        try {
-            serverSocket.close();
-            System.out.println("Server socket closed.");
-        } catch (IOException e) {
-            System.err.println("Error closing server socket.");
-            e.printStackTrace();
+        // Close server socket if open
+        if (serverSocket != null && !serverSocket.isClosed()) {
+            try {
+                serverSocket.close();
+                System.out.println("Server socket closed.");
+            } catch (IOException e) {
+                System.err.println("Error closing server socket.");
+                e.printStackTrace();
+            }
         }
-    }
 
-    // Close file streams if they are open
-    if (inputStream != null) {
-        try {
-            inputStream.close();
-            System.out.println("Input stream closed.");
-        } catch (IOException e) {
-            System.err.println("Error closing input stream.");
-            e.printStackTrace();
+        // Close file streams if they are open
+        if (inputStream != null) {
+            try {
+                inputStream.close();
+                System.out.println("Input stream closed.");
+            } catch (IOException e) {
+                System.err.println("Error closing input stream.");
+                e.printStackTrace();
+            }
         }
-    }
 
-    if (outputStream != null) {
-        try {
-            outputStream.close();
-            System.out.println("Output stream closed.");
-        } catch (IOException e) {
-            System.err.println("Error closing output stream.");
-            e.printStackTrace();
+        if (outputStream != null) {
+            try {
+                outputStream.close();
+                System.out.println("Output stream closed.");
+            } catch (IOException e) {
+                System.err.println("Error closing output stream.");
+                e.printStackTrace();
+            }
         }
-    }
 
-    System.out.println("Peer process shutdown complete.");
-}
+        System.out.println("Peer process shutdown complete.");
+    }
 
 
     public static void main(String[] args) {
