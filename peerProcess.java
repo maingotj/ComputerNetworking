@@ -66,23 +66,13 @@ public class peerProcess {
     }
 
     public void interested(Peer peer) throws IOException {
-        // Check if you are interested in the peer
-        if (amInterestedIn(peer)) {
-            MessageUtil.sendMessage(peer.getDataOut(), MessageUtil.INTERESTED, null);
-            peer.setInterestIn(true);
-        }
+        peer.setInterestIn(true);
+        logInterestedMessage(this.peerId, peer.getInfo().peerId);
     }
     
     public void notInterested(Peer peer) throws IOException {
-        MessageUtil.sendMessage(peer.getDataOut(), MessageUtil.NOT_INTERESTED, null);
         peer.setInterestIn(false);
-    }
-    
-    private boolean amInterestedIn(Peer peer) {
-        BitSet theirBitfield = peer.getInfo().getBitfield(); 
-        BitSet myBitfield = peerProcess.getBitfield(); 
-        theirBitfield.andNot(myBitfield);
-        return !theirBitfield.isEmpty();
+        logNotInterestedMessage(this.peerId, peer.getInfo().peerId);
     }
 
     public void have(MessageUtil.Message message, Peer peer) {
@@ -160,18 +150,6 @@ public class peerProcess {
         byte[] payload = ByteBuffer.allocate(4).putInt(index).array();
 
         MessageUtil.sendMessage(peer.getDataOut(), type, payload); 
-    }
-
-    public void makeBitfieldMsg(Peer peer) throws IOException {
-        byte type = 5;
-
-        // converts bitfield to byte array
-        byte[] payload = this.bitfield.toByteArray();
-
-        //calls message function with payload
-        MessageUtil.sendMessage(peer.getDataOut(), type, payload);
-
-        System.out.println("Sent Bitfield " + payload.length);
     }
     
     // makes a request message
@@ -665,6 +643,7 @@ public class peerProcess {
             try {
                 // If interested, send an "interested" message
                 makeGenMessage(MessageUtil.INTERESTED, peer);
+                System.out.println("Sent Interested Message");
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -672,6 +651,7 @@ public class peerProcess {
             try {
                 // If not interested, send a "not interested" message
                 makeGenMessage(MessageUtil.NOT_INTERESTED, peer);
+                System.out.println("Sent NOT Interested Message");
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -692,8 +672,10 @@ public class peerProcess {
     private void performBitfieldExchange(Peer peer) throws IOException {
         // Send the local bitfield to the connected peer
         sendInitialBitfield(peer);
+        System.out.println("Sent Bitfield");
         // Receive and process the bitfield from the connected peer
         MessageUtil.Message bitfieldMessage = MessageUtil.receiveMessage(peer.getDataIn());
+        System.out.println("Recieved Bitfield");
         parseMessage(bitfieldMessage, peer);
     }
 
