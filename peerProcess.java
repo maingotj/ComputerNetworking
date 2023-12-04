@@ -13,17 +13,7 @@ import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.BitSet;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -35,7 +25,6 @@ import java.util.stream.Collectors;
 public class peerProcess {
 
     private boolean allDone = false;
-    public int index;
     private PeerInfo peerInfo;
     private int peerId;
     private boolean hasFile;
@@ -50,6 +39,8 @@ public class peerProcess {
     private FileOutputStream outputStream;
     private int numChoked = 0;
     private  byte[] fileArr;
+    private int numBits = 0;
+    private HashSet<Integer> dontHave;
 
     private DataInputStream dataIn;
     private DataOutputStream dataOut;
@@ -91,6 +82,8 @@ public class peerProcess {
 
         peer.getInfo().getBitfield().set(index);
 
+        logHaveMessage(this.peerId, peer.getInfo().peerId, index);
+
         //TODO: add bitfield change
 
     }
@@ -121,7 +114,13 @@ public class peerProcess {
         ByteBuffer buf = ByteBuffer.wrap(index);
         int pIndex = buf.getInt();
 
-        System.arraycopy(piece, 0, fileArr, pIndex * (int) config.getPieceSize(), piece.length);
+        if(dontHave.contains(pIndex)) {
+            System.arraycopy(piece, 0, fileArr, pIndex * (int) config.getPieceSize(), piece.length);
+            bitfield.set(pIndex);
+
+            logPieceDownload(this.peerId, peer.getInfo().peerId, pIndex, ++numBits);
+            dontHave.remove(pIndex);
+        }
 
 
         // TODO: change bitfield
@@ -161,10 +160,18 @@ public class peerProcess {
     }
     
     // makes a request message
-    public  void makeRequest(Peer peer, int index) throws IOException {
+    public  void makeRequest(Peer peer) throws IOException {
         byte type = 6;
 
+        //TODO: add random index value
         // index of requested piece
+        int i = 0;
+        Random rand = new Random();
+        int index = 0;
+        boolean found = false;
+
+        
+
         byte[] payload = ByteBuffer.allocate(4).putInt(index).array();
 
         //calls message function with payload
@@ -692,18 +699,26 @@ private List<Peer> getChokedInterestedPeers() {
     private void initBitfield() {
         int numOfPieces = (int) Math.ceil((double) config.getFileSize() / config.getPieceSize());
         this.bitfield = new BitSet(numOfPieces);
+        dontHave = new HashSet<Integer>();
 
         // System.out.println(bitfield.size());
 
         if (hasFile) {
             bitfield.set(0, numOfPieces);
         }
-
-        StringBuilder s = new StringBuilder();
-            for( int i = 0; i < bitfield.length();  i++ )
-            {
-                s.append( bitfield.get( i ) == true ? 1: 0 );
+        else {
+            for(int i = 0; i < numOfPieces; i++) {
+                dontHave.add(i);
             }
+        }
+
+
+
+        // StringBuilder s = new StringBuilder();
+        //     for( int i = 0; i < bitfield.length();  i++ )
+        //     {
+        //         s.append( bitfield.get( i ) == true ? 1: 0 );
+        //     }
 
             // System.out.println( s );
             // System.out.println(bitfield.size());
