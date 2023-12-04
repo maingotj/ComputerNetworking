@@ -1,16 +1,2 @@
-
-2023-12-03 16:50:20: Peer 1002 makes a connection to Peer 1001.
-2023-12-03 16:52:09: Peer 1002 makes a connection to Peer 1001.
-2023-12-03 16:53:16: Peer 1002 makes a connection to Peer 1001.
-2023-12-03 16:54:43: Peer 1002 makes a connection to Peer 1001.
-2023-12-03 17:19:18: Peer 1002 makes a connection to Peer 1001.
-2023-12-03 17:20:14: Peer 1002 makes a connection to Peer 1001.
-2023-12-03 17:20:19: Peer 1002 is connected from Peer 1003.
-2023-12-03 17:22:24: Peer 1002 makes a connection to Peer 1001.
-2023-12-03 17:24:39: Peer 1002 makes a connection to Peer 1001.
-2023-12-03 17:48:11: Peer 1002 makes a connection to Peer 1001.
-2023-12-03 17:48:15: Peer 1002 is connected from Peer 1003.
-2023-12-03 17:49:16: Peer 1002 makes a connection to Peer 1001.
-2023-12-03 17:49:19: Peer 1002 is connected from Peer 1003.
-2023-12-03 17:49:43: Peer 1002 is connected from Peer 1004.
-2023-12-03 19:22:33: Peer 1002 makes a connection to Peer 1001.
+2023-12-03 19:49:33: Peer 1002 makes a connection to Peer 1001.
+2023-12-03 19:49:33: Peer 1002 received the 'not interested' message from 1001.

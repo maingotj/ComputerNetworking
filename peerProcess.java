@@ -66,23 +66,13 @@ public class peerProcess {
     }
 
     public void interested(Peer peer) throws IOException {
-        // Check if you are interested in the peer
-        if (amInterestedIn(peer)) {
-            MessageUtil.sendMessage(peer.getDataOut(), MessageUtil.INTERESTED, null);
-            peer.setInterestIn(true);
-        }
+        peer.setInterestIn(true);
+        logInterestedMessage(this.peerId, peer.getInfo().peerId);
     }
     
     public void notInterested(Peer peer) throws IOException {
-        MessageUtil.sendMessage(peer.getDataOut(), MessageUtil.NOT_INTERESTED, null);
         peer.setInterestIn(false);
-    }
-    
-    private boolean amInterestedIn(Peer peer) {
-        BitSet theirBitfield = peer.getInfo().getBitfield(); 
-        BitSet myBitfield = peerProcess.getBitfield(); 
-        theirBitfield.andNot(myBitfield);
-        return !theirBitfield.isEmpty();
+        logNotInterestedMessage(this.peerId, peer.getInfo().peerId);
     }
 
     public void have(MessageUtil.Message message, Peer peer) {
