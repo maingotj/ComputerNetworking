@@ -76,79 +76,101 @@ public class peerProcess {
 
     }
 
+    // Handles the case when the remote peer expresses interest in the current peer.
     public void interested(Peer peer) throws IOException {
+        // Set the interest flag for the remote peer to true
         peer.setInterestIn(true);
+    
+        // Log an "interested" message for tracking
         logInterestedMessage(this.peerId, peer.getInfo().peerId);
     }
     
+    // Handles the case when the remote peer expresses no interest in the current peer.
     public void notInterested(Peer peer) throws IOException {
+        // Set the interest flag for the remote peer to false
         peer.setInterestIn(false);
+    
+        // Log a "not interested" message for tracking
         logNotInterestedMessage(this.peerId, peer.getInfo().peerId);
     }
 
+    // Handles the case when a remote peer informs the current peer about having a specific piece.
     public void have(MessageUtil.Message message, Peer peer) {
-        // record what user ID has in there bitfield and change accordingly
-
+        // Extract the index of the piece from the message payload
         ByteBuffer buf = ByteBuffer.wrap(message.getPayload());
         int index = buf.getInt();
-
+    
+        // Update the bitfield of the remote peer to reflect the received piece
         peer.getInfo().getBitfield().set(index);
-
+    
+        // Log a "have" message for tracking
         logHaveMessage(this.peerId, peer.getInfo().peerId, index);
-
-        //TODO: add bitfield change
-
+    
+        // TODO: Add logic to handle changes in the bitfield of the current peer
     }
 
+    // Handles the case when a remote peer sends a request for a specific piece.
     public void request(MessageUtil.Message message, Peer peer) {
-        // record request of which piece(s) a user ID wants
-
+        // Extract the index of the requested piece from the message payload
         ByteBuffer buf = ByteBuffer.wrap(message.getPayload());
         int index = buf.getInt();
-
-
+    
+        // Attempt to fulfill the requested piece and send it to the remote peer
         try {
             makePiece(peer, index);
         } catch (IOException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
+            // Handle potential I/O errors when fulfilling the request
+            e.printStackTrace(); // Print the stack trace for debugging purposes
+            // TODO: Add appropriate error handling or logging as needed
         }
     }
 
+    // Handles the reception of a piece from a remote peer.
     public void piece(MessageUtil.Message message, Peer peer) {
-        // download piece received from a user
+        // Extract the payload from the received message
         byte[] payload = message.getPayload();
-        
+    
+        // Extract the index and piece data from the payload
         byte[] index = Arrays.copyOfRange(payload, 0, 4);
         byte[] piece = Arrays.copyOfRange(payload, 4, payload.length);
-
+    
+        // Convert the index bytes to an integer
         ByteBuffer buf = ByteBuffer.wrap(index);
         int pIndex = buf.getInt();
-
-        if(dontHave.contains(pIndex)) {
+    
+        // Check if the current peer needs the received piece
+        if (dontHave.contains(pIndex)) {
+            // Copy the received piece to the file array
             System.arraycopy(piece, 0, fileArr, pIndex * (int) config.getPieceSize(), piece.length);
+    
+            // Update the bitfield to mark the received piece as available
             bitfield.set(pIndex);
-
+    
+            // Log the successful piece download for tracking
             logPieceDownload(this.peerId, peer.getInfo().peerId, pIndex, ++numBits);
+    
+            // Remove the piece index from the set of missing pieces
             dontHave.remove(pIndex);
-
-            for(Peer p: connectedPeers) {
-                p.addToHash(pIndex);
+    
+            // Update the hash information for connected peers
+            for (Peer connectedPeer : connectedPeers) {
+                connectedPeer.addToHash(pIndex);
             }
-            // Update bytesDownloaded for the peer
+    
+            // Update the bytesDownloaded for the peer
             peer.setBytesDownloaded(peer.getBytesDownloaded() + piece.length);
         }
-
-
-        // TODO: change bitfield
+    
+        // TODO: Add logic to handle changes in the local bitfield if needed
     }
 
-    //parses what type of message it is and makes a decision based on that
+    // Parses the type of message received and takes appropriate actions based on the message type.
     public void parseMessage(MessageUtil.Message message, Peer peer) throws IOException {
+        // Extract the type of the received message
         byte type = message.getType();
-
-        // switch statement to parse type
-        switch(type) {
+    
+        // Use a switch statement to handle different message types
+        switch (type) {
             case MessageUtil.CHOKE -> choke(peer);
             case MessageUtil.UNCHOKE -> unchoke(peer);
             case MessageUtil.INTERESTED -> interested(peer);
@@ -157,80 +179,86 @@ public class peerProcess {
             case MessageUtil.BITFIELD -> bitfield(message, peer);
             case MessageUtil.REQUEST -> request(message, peer);
             case MessageUtil.PIECE -> piece(message, peer);
-            default -> System.out.println("invalid type");
+            default -> System.out.println("Invalid message type");
         }
     }
 
-    //sends a message for messages that require no payload
+    // Sends a message for messages that require no payload
     public void makeGenMessage(byte type, Peer peer) throws IOException {
+        // Use MessageUtil to send a message with the specified type and no payload to the specified peer
         MessageUtil.sendMessage(peer.getDataOut(), type, null);
     }
 
-    // makes a have message
-    public  void makeHave(Peer peer, int index) throws IOException{
+    // Makes a have message
+    public void makeHave(Peer peer, int index) throws IOException {
+        // Set the message type for "have" to 4
         byte type = 4;
-
-        // index of 4 bytes for piece had
+    
+        // Convert the piece index to a byte array of 4 bytes
         byte[] payload = ByteBuffer.allocate(4).putInt(index).array();
-
-        MessageUtil.sendMessage(peer.getDataOut(), type, payload); 
+    
+        // Use MessageUtil to send a "have" message with the specified payload to the specified peer
+        MessageUtil.sendMessage(peer.getDataOut(), type, payload);
     }
     
     // makes a request message
-    public  void makeRequest(Peer peer) throws IOException {
+    public void makeRequest(Peer peer) throws IOException {
+        // Set the message type for "request" to 6
         byte type = 6;
-
-        //TODO: add random index value
-        // index of requested piece
+    
+        // TODO: Add logic to determine a random index value for the requested piece
         int size = 0;
-        int index= 0;
-
+        int index = 0;
+    
+        // Get the bitfield of the current peer and the remote peer
         BitSet myBitfield = this.bitfield;
         BitSet interestingPieces = (BitSet) peer.getInfo().getBitfield().clone();
         interestingPieces.andNot(myBitfield);
-
+    
+        // Count the number of interesting pieces
         for (int i = interestingPieces.nextSetBit(0); i != -1; i = interestingPieces.nextSetBit(i + 1)) {
             size++;
         }
-
-
+    
+        // Generate a random index within the range of interesting pieces
         Random rand = new Random();
         int random = rand.nextInt(size - 1);
-        
-
+    
         int j = 0;
+        // Find the piece index corresponding to the randomly chosen position
         for (int i = interestingPieces.nextSetBit(0); i != -1; i = interestingPieces.nextSetBit(i + 1)) {
-            if(j == random) {
+            if (j == random) {
                 index = i;
             }
         }
-        
-
+    
+        // Convert the piece index to a byte array of 4 bytes
         byte[] payload = ByteBuffer.allocate(4).putInt(index).array();
-
-        //calls message function with payload
-        MessageUtil.sendMessage(peer.getDataOut(), type, payload); 
+    
+        // Use MessageUtil to send a "request" message with the specified payload to the specified peer
+        MessageUtil.sendMessage(peer.getDataOut(), type, payload);
     }
 
-    // makes a piece message
+    // Makes a piece message
     public void makePiece(Peer peer, int pieceIndex) throws IOException {
+        // Set the message type for "piece" to 7
         byte type = 7;
-
-        // create byte array for the piece
-        int arrIndex = pieceIndex * (int)config.getPieceSize();
-
+    
+        // Calculate the starting index in the file array for the specified piece
+        int arrIndex = pieceIndex * (int) config.getPieceSize();
+    
+        // Convert the piece index to a byte array of 4 bytes
         byte[] pIndex = ByteBuffer.allocate(4).putInt(pieceIndex).array();
-
-        byte[] piece = Arrays.copyOfRange(fileArr, arrIndex, arrIndex + (int)config.getPieceSize());
-
+    
+        // Extract the piece data from the file array for the specified piece
+        byte[] piece = Arrays.copyOfRange(fileArr, arrIndex, arrIndex + (int) config.getPieceSize());
+    
+        // Combine the piece index and piece data into a single byte array
         byte[] message = new byte[pIndex.length + piece.length];
-
         System.arraycopy(pIndex, 0, message, 0, pIndex.length);
         System.arraycopy(piece, 0, message, pIndex.length, piece.length);
-
-
-
-        //calls message function with payload
+    
+        // Use MessageUtil to send a "piece" message with the specified payload to the specified peer
         MessageUtil.sendMessage(peer.getDataOut(), type, message);
     }
 
@@ -505,42 +533,48 @@ public class peerProcess {
     //#endregion
 
     public void init() throws IOException {
+        // Read configurations from the configuration file
         readConfigurations();
+    
+        // Initialize the bitfield based on file information
         initBitfield();
+    
+        // Set up the file stream and allocate space for the file array
         initFileStream();
-
-        fileArr = new byte[(int) config.getFileSize()];
-
+    
+        // If the peer has the complete file, copy it
         if (hasFile) {
             copyFile();
         }
-        
+    
+        // If the current peer is not the first peer in the list, connect to previous peers
         if (peerId != allPeers.get(0).peerId) {
             connectToPreviousPeers();
         }
-
+    
+        // Listen for incoming connections from other peers
         listenForConnections();
-
+    
         // Start the choking and unchoking process in a new thread
-        new Thread(() ->{
+        new Thread(() -> {
             try {
                 startChokingUnchoking();
             } catch (IOException e) {
                 e.printStackTrace();
             }
         }).start();
-
+    
         // Start the optimistic unchoking process in another new thread
-        new Thread(() ->{
+        new Thread(() -> {
             try {
                 startOptimisticUnchoking();
             } catch (IOException e) {
                 e.printStackTrace();
             }
         }).start();
-
+    
         // Begin exchanging pieces here...
-
+    
         // Wait for all peers to download the complete file, then terminate.
         waitForCompletion();
     }
@@ -636,8 +670,8 @@ public class peerProcess {
     
     public double calculateDownloadRate(Peer peer) {
         long currentTime = System.currentTimeMillis();
-        long lastDownloadTime = peer.getLastDownloadTime(); // Replace with your actual method to get the last download time
-        int bytesDownloaded = peer.getBytesDownloaded(); // Replace with your actual method to get the bytes downloaded
+        long lastDownloadTime = peer.getLastDownloadTime(); 
+        int bytesDownloaded = peer.getBytesDownloaded(); 
 
         // Calculate time taken to download the last pieces
         double timeTakenInMilliseconds = (currentTime - lastDownloadTime);
@@ -670,38 +704,51 @@ public class peerProcess {
     }
 
     public Peer selectOptimisticNeighbor() {
-    List<Peer> chokedInterestedPeers = getChokedInterestedPeers();
+        List<Peer> chokedInterestedPeers = getChokedInterestedPeers();
 
-    if (!chokedInterestedPeers.isEmpty()) {
-        // Randomly select an optimistically unchoked neighbor
-        Random random = new Random();
-        int randomIndex = random.nextInt(chokedInterestedPeers.size());
-        Peer optimisticNeighbor = chokedInterestedPeers.get(randomIndex);
+        if (!chokedInterestedPeers.isEmpty()) {
+            // Randomly select an optimistically unchoked neighbor
+            Random random = new Random();
+            int randomIndex = random.nextInt(chokedInterestedPeers.size());
+            Peer optimisticNeighbor = chokedInterestedPeers.get(randomIndex);
 
-        return optimisticNeighbor;
-    }
-
-    return null;
-}
-
-private List<Peer> getChokedInterestedPeers() {
-    List<Peer> chokedInterestedPeers = new ArrayList<>();
-
-    for (Peer connectedPeer : connectedPeers) {
-        if (!connectedPeer.isChoking() && connectedPeer.isInterestedIn()) {
-            chokedInterestedPeers.add(connectedPeer);
+            return optimisticNeighbor;
         }
+
+        return null;
     }
 
-    return chokedInterestedPeers;
-}
+    private List<Peer> getChokedInterestedPeers() {
+        // Create a list to store peers that are interested and not choked
+        List<Peer> chokedInterestedPeers = new ArrayList<>();
+
+        // Iterate through connected peers to filter interested and not choked peers
+        for (Peer connectedPeer : connectedPeers) {
+            // Check if the connected peer is not being choked and is interested in the current peer
+            if (!connectedPeer.isChoking() && connectedPeer.isInterestedIn()) {
+                // Add the connected peer to the list of choked and interested peers
+                chokedInterestedPeers.add(connectedPeer);
+            }
+        }
+
+        // Return the list of choked and interested peers
+        return chokedInterestedPeers;
+    }
 
     private void readConfigurations() throws IOException {
+        // Create a new CommonConfig instance to store common configuration settings
         config = new CommonConfig();
+    
+        // Read peer information from the "PeerInfo.cfg" file and store it in the allPeers list
         allPeers = readPeerInfo("PeerInfo.cfg");
+    
+        // Iterate through the list of peers to find information specific to the current peer
         for (PeerInfo peer : allPeers) {
+            // Check if the peer ID matches the current peer's ID
             if (peer.peerId == this.peerId) {
+                // Set the hasFile attribute based on whether the current peer has the complete file
                 this.hasFile = peer.hasFile;
+                // Exit the loop since the relevant information has been found
                 break;
             }
         }
