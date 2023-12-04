@@ -18,7 +18,6 @@ public class PeerInfo {
 
     public void addBitfield(BitSet bitfield1) {
         bitfield = bitfield1;
-
     }
 
     public BitSet getBitfield() {
