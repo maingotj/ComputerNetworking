@@ -540,13 +540,13 @@ public class peerProcess {
         int numOfPieces = (int) Math.ceil((double) config.getFileSize() / config.getPieceSize());
         this.bitfield = new BitSet(numOfPieces);
 
-        //System.out.println(bitfield.size());
+        System.out.println(bitfield.size());
 
         if (hasFile) {
             bitfield.set(0, numOfPieces);
         }
 
-        //System.out.println(numOfPieces);
+        System.out.println(numOfPieces);
     }
 
     private void initFileStream() throws FileNotFoundException {
