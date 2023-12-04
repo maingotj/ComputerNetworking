@@ -1,11 +1,11 @@
 import java.io.BufferedWriter;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileWriter;
-import java.io.File;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -13,7 +13,17 @@ import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.BitSet;
+import java.util.Comparator;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Random;
+import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -41,6 +51,7 @@ public class peerProcess {
     private  byte[] fileArr;
     private int numBits = 0;
     private HashSet<Integer> dontHave;
+    private ServerSocket serverSocket;
 
     private DataInputStream dataIn;
     private DataOutputStream dataOut;
@@ -914,7 +925,7 @@ private List<Peer> getChokedInterestedPeers() {
         System.out.println("listening on port" + this.peerInfo.port);
 
         try {
-            ServerSocket serverSocket = new ServerSocket(this.peerInfo.port);
+            serverSocket = new ServerSocket(this.peerInfo.port);
 
 
             while (true) {
@@ -933,23 +944,87 @@ private List<Peer> getChokedInterestedPeers() {
     }
 
     private void waitForCompletion() {
-        
-        /* ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
-
-        // Schedule the first task to run every 5 seconds
+        ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
+    
+        // Schedule a task to check the download completion status periodically
         scheduler.scheduleAtFixedRate(() -> {
-            // Your first function goes here
-            System.out.println("Task 1 executed at: " + System.currentTimeMillis());
-        }, 0, 5, TimeUnit.SECONDS);
-
-        // Schedule the second task to run every 10 seconds
-        scheduler.scheduleAtFixedRate(() -> {
-            // Your second function goes here
-            System.out.println("Task 2 executed at: " + System.currentTimeMillis());
-        }, 0, 10, TimeUnit.SECONDS); */
-
-
+            boolean allCompleted = true;
+    
+            // Check the bitfield of each peer to determine if they have downloaded the complete file
+            for (PeerInfo peerInfo : allPeers) {
+                if (!isDownloadComplete(peerInfo)) {
+                    allCompleted = false;
+                    break;
+                }
+            }
+    
+            // If all peers have completed their downloads, perform shutdown operations
+            if (allCompleted) {
+                System.out.println("All peers have completed downloading. Shutting down...");
+                shutdown();
+                scheduler.shutdownNow(); // Stop the scheduled task
+            }
+    
+        }, 0, 5, TimeUnit.SECONDS); // Adjust the period as needed
     }
+    
+    
+    // Method to determine if a peer has completed the download
+    private boolean isDownloadComplete(PeerInfo peerInfo) {
+        BitSet peerBitfield = peerInfo.getBitfield();
+        return peerBitfield.cardinality() == bitfield.size();
+    }
+
+    // Method to perform shutdown operations
+private void shutdown() {
+    System.out.println("Shutting down the peer process...");
+
+    // Close all peer connections
+    for (Peer peer : connectedPeers) {
+        try {
+            peer.close();
+            System.out.println("Closed connection with Peer " + peer.getInfo().peerId);
+        } catch (IOException e) {
+            System.err.println("Error closing connection with Peer " + peer.getInfo().peerId);
+            e.printStackTrace();
+        }
+    }
+
+    // Close server socket if open
+    if (serverSocket != null && !serverSocket.isClosed()) {
+        try {
+            serverSocket.close();
+            System.out.println("Server socket closed.");
+        } catch (IOException e) {
+            System.err.println("Error closing server socket.");
+            e.printStackTrace();
+        }
+    }
+
+    // Close file streams if they are open
+    if (inputStream != null) {
+        try {
+            inputStream.close();
+            System.out.println("Input stream closed.");
+        } catch (IOException e) {
+            System.err.println("Error closing input stream.");
+            e.printStackTrace();
+        }
+    }
+
+    if (outputStream != null) {
+        try {
+            outputStream.close();
+            System.out.println("Output stream closed.");
+        } catch (IOException e) {
+            System.err.println("Error closing output stream.");
+            e.printStackTrace();
+        }
+    }
+
+    System.out.println("Peer process shutdown complete.");
+}
+
 
     public static void main(String[] args) {
         if (args.length != 1) {

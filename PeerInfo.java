@@ -20,6 +20,10 @@ public class PeerInfo {
     public void addBitfield(BitSet bitfield1) {
         bitfield = bitfield1;
 
+        if (this.neededPieces == null) {
+            this.neededPieces = new HashSet<>();
+        }
+        
         for (int i = bitfield.nextSetBit(0); i != -1; i = bitfield.nextSetBit(i + 1)) {
             neededPieces.add(i);
         }
